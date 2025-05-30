@@ -1,0 +1,7 @@
+export TAG="${TAG:-$(date +"%Y%m%d-%H%M")}"
+export DEFAULT_IMAGE_TAG="${DEFAULT_IMAGE_TAG:-latest}"
+export COLOR_GREEN="${COLOR_GREEN:-\033[0;32m}"
+export TEST_DIRECTORY="${TEST_DIRECTORY:-tests}"
+export PYTHON_VERSION="${PYTHON_VERSION:-python3.10}"
+export PROJECT_VENV_DIR="${PROJECT_VENV_DIR:-.venv}"
+export PROJECT_JUPYTER_VENV_DIR="${PROJECT_VENV_DIR:-.jupyter_venv}"
