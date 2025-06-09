@@ -19,7 +19,7 @@ fi
 
 print_status "🐳 Building Docker image..."
 DATE_TAG=$(date +"%Y%m%d-%H%M")
-docker build -t "$IMAGE_NAME:latest" -t "$IMAGE_NAME:$DATE_TAG" "$DOCKERFILE_DIR"
+docker build --network host -t "$IMAGE_NAME:latest" -t "$IMAGE_NAME:$DATE_TAG" "$DOCKERFILE_DIR"
 
 print_status "✅ Build complete. Tagged as $DATE_TAG"
 

@@ -32,6 +32,6 @@ if [[ "${SKIP_WHEEL:-false}" != "true" ]]; then
   "$KEEPSAKE_SCRIPTS_ROOT/build-wheel.sh"
 fi
 
-if [[ "${SKIP_WHEEL:-false}" != "true" ]]; then
-  "$KEEPSAKE_SCRIPTS_ROOT/build-wheel.sh"
+if [[ "${SKIP_DOCKER_IMAGE:-false}" != "true" ]]; then
+  "$KEEPSAKE_SCRIPTS_ROOT/build-docker-image.sh"
 fi
