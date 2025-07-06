@@ -5,6 +5,11 @@ Reusable Docker build/test scripts.
 ## Usage
 
 ```bash
+export KEEPSAKE_PROJECT_ROOT="$HOME/PycharmProjects"
+export KEEPSAKE_SCRIPTS_ROOT="$KEEPSAKE_PROJECT_ROOT/keepsake-scripts"
+export KEEPSAKE_COMPOSE_PROJECT_ROOT="$KEEPSAKE_PROJECT_ROOT/keepsake"
+export PYPI_PACKAGE_DIR="$KEEPSAKE_PROJECT_ROOT/keepsake-pypi/keepsake-pypi/package
+
 # Set up project-specific overrides
 cp .env.example .env.build
 
