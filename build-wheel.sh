@@ -53,9 +53,29 @@ WHEEL_NAME=$(basename "$WHEEL_FILE")
 echo "✅ Built wheel: $WHEEL_NAME"
 
 # Copy to local PyPI package directory
-DEST="$PYPI_PACKAGE_DIR/$WHEEL_NAME"
-echo "📤 Copying to: $DEST"
-cp "$WHEEL_FILE" "$DEST"
+#DEST="$PYPI_PACKAGE_DIR/$WHEEL_NAME"
+#echo "📤 Copying to: $DEST"
+#cp "$WHEEL_FILE" "$DEST"
 
-echo "✅ Wheel published to local pypi."
+# 🧪 Optional: Validate that your PyPI server is reachable
+#curl --fail-with-body --silent --show-error -u "$PYPI_USERNAME:$PYPI_PASSWORD" \
+#     -F "content=@$WHEEL_FILE" \
+#     "http://$PYPI_HOST:$PYPI_PORT/" || {
+#  log_error "❌ Upload failed"
+#  exit 1
+#}
+
+# 📤 Upload to private PyPI via twine
+echo "📤 Uploading $WHEEL_NAME to PyPI at $PYPI_HOST:$PYPI_PORT using twine..."
+
+uv run twine upload \
+  --repository-url "http://$PYPI_HOST:$PYPI_PORT" \
+  --username "$PYPI_USERNAME" \
+  --password "$PYPI_PASSWORD" \
+  "$WHEEL_FILE" || {
+    log_error "❌ Upload failed"
+    exit 1
+}
+
+echo "✅ Wheel published to local PyPI."
 echo "🕓 Completed on $(date)"

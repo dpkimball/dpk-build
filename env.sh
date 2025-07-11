@@ -5,3 +5,7 @@ export TEST_DIRECTORY="${TEST_DIRECTORY:-tests}"
 export PYTHON_VERSION="${PYTHON_VERSION:-python3.10}"
 export PROJECT_VENV_DIR="${PROJECT_VENV_DIR:-.venv}"
 export PROJECT_JUPYTER_VENV_DIR="${PROJECT_VENV_DIR:-.jupyter_venv}"
+export PYPI_HOST=192.168.86.23
+export PYPI_PORT=8080
+export PYPI_USERNAME=admin
+export PYPI_PASSWORD=your-secret-password
