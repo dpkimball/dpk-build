@@ -78,4 +78,16 @@ uv run twine upload \
 }
 
 echo "✅ Wheel published to local PyPI."
+
+# Normalize package name for env var key
+PACKAGE_KEY="$(echo "${PACKAGE_NAME}" | tr '[:lower:]-' '[:upper:]_')"
+
+# Remove existing line for this package if present
+sed -i.bak "/^${PACKAGE_KEY}_VERSION=/d" "$ENV_STORE"
+
+# Append updated version
+echo "${PACKAGE_KEY}_VERSION=$NEW_VERSION" >> "$ENV_STORE"
+
+echo "✅ Recorded version in $ENV_STORE: ${PACKAGE_KEY}_VERSION=$NEW_VERSION"
+
 echo "🕓 Completed on $(date)"

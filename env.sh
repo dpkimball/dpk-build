@@ -1,3 +1,4 @@
+export ENV_STORE="$KEEPSAKE_SCRIPTS_ROOT/.env.versions"
 export TAG="${TAG:-$(date +"%Y%m%d-%H%M")}"
 export DEFAULT_IMAGE_TAG="${DEFAULT_IMAGE_TAG:-latest}"
 export COLOR_GREEN="${COLOR_GREEN:-\033[0;32m}"
