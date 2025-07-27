@@ -1,62 +1,95 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
-source "$(dirname "$0")/utils.sh"
+
+# 🌐 Load shared utils and env
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/utils.sh"
+source "$KEEPSAKE_SCRIPTS_ROOT/env.sh"
 
 log_info "📦 Building Python wheel..."
 
-# Ensure virtualenv exists
+# 📁 Required paths
+PROJECT_VENV_DIR="${PROJECT_VENV_DIR:-.venv}"
+PYPROJECT="${PYPROJECT:-$PROJECT_ROOT/pyproject.toml}"
+DIST_DIR="${DIST_DIR:-$PROJECT_ROOT/dist}"
+
+# Validate virtualenv
 if [[ ! -d "$PROJECT_VENV_DIR" || ! -f "$PROJECT_VENV_DIR/bin/activate" ]]; then
   log_error "❌ Virtualenv not found at $PROJECT_VENV_DIR. Please run build.sh with --clean or ensure it exists."
   exit 1
 fi
 
-echo "📁 Working from: $PROJECT_ROOT"
+log_info "📁 Working from: $PROJECT_ROOT"
 
-# 🧮 Query PyPI server for latest version
-echo "🔍 Checking latest version on local PyPI server..."
-PACKAGE_NAME=$(sed -nE 's/^name = "([^"]+)"/\1/p' "$PYPROJECT" | head -n1)
-LATEST_VERSION=$(uv pip index versions "$PACKAGE_NAME" --index-url "http://$PYPI_HOST:$PYPI_PORT" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+# 🔍 Extract package name from pyproject.toml
+PACKAGE_LINE=$(grep -E '^\s*name\s*=' "$PYPROJECT" | head -n1)
+PACKAGE_NAME=$(echo "$PACKAGE_LINE" | awk -F '=' '{gsub(/"/, "", $2); gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}')
 
-if [[ -z "$LATEST_VERSION" ]]; then
-  echo "⚠️  No versions found on PyPI. Defaulting to 0.0.0"
-  LATEST_VERSION="0.0.0"
-fi
-
-IFS='.' read -r major minor patch <<< "$LATEST_VERSION"
-NEW_VERSION="$major.$minor.$((patch + 1))"
-echo "🔢 Bumping version: $LATEST_VERSION → $NEW_VERSION"
-
-# Detect OS and use correct sed inline syntax
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  sed -i '' -E "s/^version = \".*\"/version = \"$NEW_VERSION\"/" "$PYPROJECT"
-else
-  sed -i -E "s/^version = \".*\"/version = \"$NEW_VERSION\"/" "$PYPROJECT"
-fi
-
-# 🧹 Clean previous build
-echo "🧹 Cleaning build artifacts..."
-rm -rf "$DIST_DIR" build/
-
-# 📦 Build new wheel
-echo "📦 Building wheel..."
-uv run python -m build
-
-# 📍 Get built wheel path
-PACKAGE_NAME_UNDERSCORE="${PACKAGE_NAME//-/_}"
-WHEEL_FILE=$(find "$DIST_DIR" -name "${PACKAGE_NAME_UNDERSCORE}-*.whl" | head -n1)
-
-# Validate the result
-if [[ -z "$WHEEL_FILE" ]]; then
-  log_error "❌ No .whl file found for package '$PACKAGE_NAME' in $DIST_DIR"
+if [[ -z "$PACKAGE_NAME" ]]; then
+  log_error "❌ Could not extract package name from $PYPROJECT"
   exit 1
 fi
 
-WHEEL_NAME=$(basename "$WHEEL_FILE")
-echo "✅ Built wheel: $WHEEL_NAME"
+log_info "🔍 Package name: $PACKAGE_NAME"
 
-# 📤 Upload to private PyPI via twine
-echo "📤 Uploading $WHEEL_NAME to PyPI at $PYPI_HOST:$PYPI_PORT using twine..."
+# 🔍 Get latest version from local PyPI
+log_info "🔍 Querying local PyPI for latest $PACKAGE_NAME version..."
+GET_VERSION_SCRIPT="$KEEPSAKE_SCRIPTS_ROOT/get_latest_pypi_version.sh"
 
+if [[ ! -x "$GET_VERSION_SCRIPT" ]]; then
+  log_error "❌ Version script not found or not executable: $GET_VERSION_SCRIPT"
+  exit 1
+fi
+
+LATEST_VERSION="$("$GET_VERSION_SCRIPT" "$PACKAGE_NAME")"
+EXIT_CODE=$?
+
+if [[ $EXIT_CODE -ne 0 ]]; then
+  log_error "❌ Version script failed with exit code $EXIT_CODE"
+  exit $EXIT_CODE
+fi
+
+log_info "🔢 Latest version on PyPI: $LATEST_VERSION"
+
+if [[ -z "$LATEST_VERSION" ]]; then
+  log_info "⚠️  No versions found on PyPI. Defaulting to 0.0.0"
+  LATEST_VERSION="0.0.0"
+fi
+
+MAJOR=$(echo "$LATEST_VERSION" | cut -d. -f1)
+MINOR=$(echo "$LATEST_VERSION" | cut -d. -f2)
+PATCH=$(echo "$LATEST_VERSION" | cut -d. -f3)
+PATCH=$((PATCH + 1))
+NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+
+# 📝 Update pyproject.toml version
+log_info "📝 Updating version in pyproject.toml to $NEW_VERSION"
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  sed -i '' -E "s/^[[:space:]]*version[[:space:]]*=[[:space:]]*\"[^\"]+\"/version = \"$NEW_VERSION\"/" "$PYPROJECT"
+else
+  sed -i -E "s/^[[:space:]]*version[[:space:]]*=[[:space:]]*\"[^\"]+\"/version = \"$NEW_VERSION\"/" "$PYPROJECT"
+fi
+# 🧹 Clean old builds
+log_info "🧹 Cleaning old artifacts..."
+rm -rf "$DIST_DIR" build/ *.egg-info
+
+# 🛠️ Build wheel
+log_info "📦 Building wheel with uv..."
+uv run python -m build
+
+# ✅ Confirm output
+PACKAGE_NAME_UNDERSCORE="${PACKAGE_NAME//-/_}"
+WHEEL_FILE=$(find "$DIST_DIR" -name "${PACKAGE_NAME_UNDERSCORE}-*.whl" | head -n1)
+if [[ -z "$WHEEL_FILE" ]]; then
+  log_error "❌ No .whl file found for package '$PACKAGE_NAME'"
+  exit 1
+fi
+
+log_info "✅ Built: $(basename "$WHEEL_FILE")"
+
+# 🚀 Upload to local PyPI
+log_info "📤 Uploading to PyPI ($PYPI_HOST:$PYPI_PORT)..."
 uv run twine upload \
   --repository-url "http://$PYPI_HOST:$PYPI_PORT" \
   --username "$PYPI_USERNAME" \
@@ -64,7 +97,7 @@ uv run twine upload \
   "$WHEEL_FILE" || {
     log_error "❌ Upload failed"
     exit 1
-}
+  }
 
-echo "✅ Wheel published to local PyPI."
-echo "🕓 Completed on $(date)"
+log_info "✅ Upload complete for $PACKAGE_NAME@$NEW_VERSION"
+log_info "🕓 Finished at $(date)"
