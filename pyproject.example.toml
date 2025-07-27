@@ -1,0 +1,84 @@
+[project]
+name = "keepsake-example-ai"
+version = "0.1.1"
+description = "Jupyter-ready AI lab for video decoding, storytelling, and visual narration"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+
+dependencies = [
+    "dlib>=19.24.2",
+    "ml_dtypes>=0.3.1",
+    "numpy>=1.26,<2.0",
+    "Pillow>=10.0",
+    "onnxruntime>=1.18,<2.0",
+    "insightface>=0.7.3",
+    "dlib>=19.24", # Optional: Only if you really use dlib fallback code
+    "keepsake-image-ai==0.1.67",
+    "segment-anything @ git+https://github.com/facebookresearch/segment-anything.git",
+    "keepsake-services==0.1.10",
+    "groundingdino==0.1.1"
+]
+
+[project.optional-dependencies]
+mac = [
+    "opencv-python>=4.11.0.86,<5.0.0" # linux gets this package via another dependency / installing causes conflict for linux
+]
+linux = [
+    "decord>=0.6.0"
+]
+notebook = [
+    "jupyterlab>=4.0.0",
+    "ipykernel>=6.29.0"
+]
+develop = [
+    "black",
+    "build",
+    "flake8",
+    "isort",
+    "pytest>=7.0.0",
+    "pytest-mock>=3.10.0",
+    "pytest-cov>=4.0.0",
+    "twine"
+]
+training = [
+    "huggingface_hub>=0.21.3,<1.0.0",
+    "diffusers[training] @ git+https://github.com/huggingface/diffusers.git@main",
+    "accelerate>=0.28.0,<1.0.0",
+    "datasets>=2.14.0",
+    "torch>=2.1.2,<3.0.0",
+    "transformers>=4.37.2,<5.0.0",
+    "protobuf==3.20.3,<4.0.0"
+]
+
+[tool.setuptools.packages.find]
+exclude = ["dreambooth_dataset", "design"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+log_level = "INFO"
+testpaths = ["keepsake_video_ai/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short" #  "-s"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.uv.sources]
+keepsake-image-ai = { index = "local" }
+
+[[tool.uv.index]]
+name = "local"
+url = "http://admin:your-secret-password@192.168.86.23:8080/simple"
+verify_ssl = false
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
