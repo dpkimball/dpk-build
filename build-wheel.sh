@@ -6,6 +6,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
 source "$KEEPSAKE_SCRIPTS_ROOT/env.sh"
 
+# 🔧 Override PyPI settings for local development if set
+if [[ -n "${PYPI_HOST_OVERRIDE:-}" ]]; then
+  export PYPI_HOST="$PYPI_HOST_OVERRIDE"
+fi
+
 log_info "📦 Building Python wheel..."
 
 # 📁 Required paths

@@ -20,14 +20,15 @@ PACKAGE_NAME_SAFE=$(echo "$PACKAGE_NAME" | tr '-' '_')
 WHEEL=$(curl -s -u "$PYPI_USERNAME:$PYPI_PASSWORD" \
   "http://$PYPI_HOST:$PYPI_PORT/simple/$PACKAGE_NAME/" \
   | grep -oE "$PACKAGE_NAME_SAFE-[0-9]+\.[0-9]+\.[0-9]+[^\" ]*\.whl" \
-  | sort -V | tail -n1)
+  | sort -V | tail -n1 || true)
 
 # 🧪 Extract version from filename
-VERSION=$(basename "$WHEEL" | sed -E "s/^$PACKAGE_NAME_SAFE-([0-9]+\.[0-9]+\.[0-9]+).*\.whl/\1/")
+VERSION=$(basename "$WHEEL" | sed -E "s/^$PACKAGE_NAME_SAFE-([0-9]+\.[0-9]+\.[0-9]+).*\.whl/\1/" || true)
 
 if [[ -z "$VERSION" ]]; then
-  echo "❌ Failed to retrieve version for $PACKAGE_NAME" >&2
-  exit 1
+  # No versions found - return empty string to indicate first build
+  echo ""
+  exit 0
 fi
 
 echo "$VERSION"
