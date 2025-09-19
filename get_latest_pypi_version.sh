@@ -8,10 +8,7 @@ set -euo pipefail
 
 PACKAGE_NAME="$1"
 
-PYPI_HOST="${PYPI_HOST:-192.168.86.23}"
-PYPI_PORT="${PYPI_PORT:-8080}"
-PYPI_USERNAME="${PYPI_USERNAME:-admin}"
-PYPI_PASSWORD="${PYPI_PASSWORD:-your-secret-password}"
+# Use environment variables from env.sh (no hardcoded defaults for local development)
 
 # 🧽 Normalize: match underscores in filenames
 PACKAGE_NAME_SAFE=$(echo "$PACKAGE_NAME" | tr '-' '_')
