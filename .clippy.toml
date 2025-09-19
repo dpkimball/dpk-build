@@ -1,0 +1,3 @@
+# Clippy configuration for memory-graph-service
+# Allow dead code in generated protobuf files
+allow = ["dead_code"]
