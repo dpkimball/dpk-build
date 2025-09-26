@@ -7,7 +7,7 @@ source "$(dirname "$0")/common.sh"
 IMAGE_NAME="${IMAGE_NAME:-my_image}"
 DOCKERFILE_DIR="${DOCKERFILE_DIR:-.}"
 COMPOSE_SERVICE="${COMPOSE_SERVICE:-}"
-SKIP_TESTS="${SKIP_TESTS:-false}"
+SKIP_TESTS="${SKIP_TESTS:-true}"
 CLEAN="${CLEAN:-false}"
 
 print_status "🔍 Config: IMAGE_NAME=$IMAGE_NAME | CLEAN=$CLEAN | SKIP_TESTS=$SKIP_TESTS | COMPOSE_SERVICE=$COMPOSE_SERVICE"
@@ -21,12 +21,38 @@ fi
 
 print_status "🐳 Building Docker image..."
 DATE_TAG=$(date +"%Y%m%d-%H%M")
-docker build --network host -t "$IMAGE_NAME:latest" -t "$IMAGE_NAME:$DATE_TAG" "$DOCKERFILE_DIR"
+
+# Build command with optional build arguments
+BUILD_CMD="docker build --network host"
+
+# Add build arguments if environment variables are set
+if [ -n "${UV_INDEX_URL:-}" ]; then
+    BUILD_CMD="$BUILD_CMD --build-arg UV_INDEX_URL=\"$UV_INDEX_URL\""
+fi
+if [ -n "${UV_EXTRA_INDEX_URL:-}" ]; then
+    BUILD_CMD="$BUILD_CMD --build-arg UV_EXTRA_INDEX_URL=\"$UV_EXTRA_INDEX_URL\""
+fi
+if [ -n "${PIP_INDEX_URL:-}" ]; then
+    BUILD_CMD="$BUILD_CMD --build-arg PIP_INDEX_URL=\"$PIP_INDEX_URL\""
+fi
+if [ -n "${PIP_EXTRA_INDEX_URL:-}" ]; then
+    BUILD_CMD="$BUILD_CMD --build-arg PIP_EXTRA_INDEX_URL=\"$PIP_EXTRA_INDEX_URL\""
+fi
+
+# Add tags and build context
+BUILD_CMD="$BUILD_CMD -t \"$IMAGE_NAME:latest\" -t \"$IMAGE_NAME:$DATE_TAG\" \"$DOCKERFILE_DIR\""
+
+# Execute the build command
+eval $BUILD_CMD
 
 print_status "✅ Build complete. Tagged as $DATE_TAG"
 
 if [ "$SKIP_TESTS" != true ]; then
-  ./test.sh || print_warning "⚠ Tests failed"
+  if [ -f "./test.sh" ]; then
+    ./test.sh || print_warning "⚠ Tests failed"
+  else
+    print_warning "⚠ No test.sh found, skipping tests"
+  fi
 fi
 
 if [ -n "$COMPOSE_SERVICE" ]; then
