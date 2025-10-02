@@ -6,9 +6,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
 source "$KEEPSAKE_SCRIPTS_ROOT/env.sh"
 
-# 🔧 Override PyPI settings for local development if set
+# 🔧 Store PyPI settings for local development if set (don't export yet)
 if [[ -n "${PYPI_HOST_OVERRIDE:-}" ]]; then
-  export PYPI_HOST="$PYPI_HOST_OVERRIDE"
+  PYPI_HOST="$PYPI_HOST_OVERRIDE"
+else
+  PYPI_HOST="${PYPI_HOST:-localhost}"
+fi
+if [[ -n "${PYPI_PORT_OVERRIDE:-}" ]]; then
+  PYPI_PORT="$PYPI_PORT_OVERRIDE"
+else
+  PYPI_PORT="${PYPI_PORT:-8080}"
 fi
 
 log_info "📦 Building Python wheel..."
@@ -81,6 +88,7 @@ rm -rf "$DIST_DIR" build/ *.egg-info
 
 # 🛠️ Build wheel
 log_info "📦 Building wheel with uv..."
+# Build with uv - PyPI env vars should be correct now
 uv run python -m build
 
 # ✅ Confirm output
@@ -95,7 +103,8 @@ log_info "✅ Built: $(basename "$WHEEL_FILE")"
 
 # 🚀 Upload to local PyPI
 log_info "📤 Uploading to PyPI ($PYPI_HOST:$PYPI_PORT)..."
-uv run twine upload \
+pip install twine
+twine upload \
   --repository-url "http://$PYPI_HOST:$PYPI_PORT" \
   --username "$PYPI_USERNAME" \
   --password "$PYPI_PASSWORD" \
