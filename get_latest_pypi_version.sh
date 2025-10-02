@@ -10,6 +10,14 @@ PACKAGE_NAME="$1"
 
 # Use environment variables from env.sh (no hardcoded defaults for local development)
 
+# 🔧 Override PyPI settings for local development if set
+if [[ -n "${PYPI_HOST_OVERRIDE:-}" ]]; then
+  export PYPI_HOST="$PYPI_HOST_OVERRIDE"
+fi
+if [[ -n "${PYPI_PORT_OVERRIDE:-}" ]]; then
+  export PYPI_PORT="$PYPI_PORT_OVERRIDE"
+fi
+
 # 🧽 Normalize: match underscores in filenames
 PACKAGE_NAME_SAFE=$(echo "$PACKAGE_NAME" | tr '-' '_')
 

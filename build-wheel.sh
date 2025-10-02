@@ -10,6 +10,9 @@ source "$KEEPSAKE_SCRIPTS_ROOT/env.sh"
 if [[ -n "${PYPI_HOST_OVERRIDE:-}" ]]; then
   export PYPI_HOST="$PYPI_HOST_OVERRIDE"
 fi
+if [[ -n "${PYPI_PORT_OVERRIDE:-}" ]]; then
+  export PYPI_PORT="$PYPI_PORT_OVERRIDE"
+fi
 
 log_info "📦 Building Python wheel..."
 
