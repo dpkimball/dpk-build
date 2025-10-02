@@ -1,0 +1,4 @@
+pub mod entity_identified_application_service;
+
+pub use entity_identified_application_service::EntityIdentifiedApplicationService;
+
