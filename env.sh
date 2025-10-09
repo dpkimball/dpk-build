@@ -8,6 +8,6 @@ export PROJECT_VENV_DIR="${PROJECT_VENV_DIR:-.venv}"
 export PROJECT_JUPYTER_VENV_DIR="${PROJECT_JUPYTER_VENV_DIR:-.jupyter_venv}"
 # PyPI configuration - only set if not already set
 PYPI_HOST="${PYPI_HOST:-localhost}"
-PYPI_PORT="${PYPI_PORT:-8300}"
+PYPI_PORT="${PYPI_PORT:-8083}"
 PYPI_USERNAME="${PYPI_USERNAME:-admin}"
 PYPI_PASSWORD="${PYPI_PASSWORD:-your-secret-password}"
