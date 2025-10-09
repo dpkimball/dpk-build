@@ -35,3 +35,7 @@ fi
 if [[ "${SKIP_DOCKER_IMAGE:-false}" != "true" ]]; then
   "$KEEPSAKE_SCRIPTS_ROOT/build-docker-image.sh"
 fi
+
+if [[ "${SKIP_K8S_DEPLOY:-false}" != "true" && "${K8S_DEPLOY:-false}" = "true" ]]; then
+  "$KEEPSAKE_SCRIPTS_ROOT/deploy-k8s.sh"
+fi

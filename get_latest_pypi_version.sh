@@ -24,7 +24,7 @@ PACKAGE_NAME_SAFE=$(echo "$PACKAGE_NAME" | tr '-' '_')
 # 🕸 Fetch the latest matching wheel
 WHEEL=$(curl -s -u "$PYPI_USERNAME:$PYPI_PASSWORD" \
   "http://$PYPI_HOST:$PYPI_PORT/simple/$PACKAGE_NAME/" \
-  | grep -oE "$PACKAGE_NAME_SAFE-[0-9]+\.[0-9]+\.[0-9]+[^\" ]*\.whl" \
+  | grep -oE "$PACKAGE_NAME_SAFE-[0-9]+\.[0-9]+\.[0-9]+.*\.whl" \
   | sort -V | tail -n1 || true)
 
 # 🧪 Extract version from filename

@@ -93,7 +93,8 @@ uv run python -m build
 
 # ✅ Confirm output
 PACKAGE_NAME_UNDERSCORE="${PACKAGE_NAME//-/_}"
-WHEEL_FILE=$(find "$DIST_DIR" -name "${PACKAGE_NAME_UNDERSCORE}-*.whl" | head -n1)
+PACKAGE_NAME_LOWER=$(echo "$PACKAGE_NAME_UNDERSCORE" | tr '[:upper:]' '[:lower:]')
+WHEEL_FILE=$(find "$DIST_DIR" -name "${PACKAGE_NAME_LOWER}-*.whl" | head -n1)
 if [[ -z "$WHEEL_FILE" ]]; then
   log_error "❌ No .whl file found for package '$PACKAGE_NAME'"
   exit 1
