@@ -15,7 +15,7 @@ fi
 if [[ -n "${PYPI_PORT_OVERRIDE:-}" ]]; then
   PYPI_PORT="$PYPI_PORT_OVERRIDE"
 else
-  PYPI_PORT="${PYPI_PORT:-8080}"
+  PYPI_PORT="${PYPI_PORT:-31126}"
 fi
 
 log_info "📦 Building Python wheel..."

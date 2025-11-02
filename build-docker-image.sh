@@ -35,8 +35,10 @@ DATE_TAG=$(date +"%Y%m%d-%H%M")
 BUILD_CMD="docker build --network host"
 
 # Add build arguments if environment variables are set
-if [ -n "${UV_INDEX_URL:-}" ]; then
-    BUILD_CMD="$BUILD_CMD --build-arg UV_INDEX_URL=\"$UV_INDEX_URL\""
+# Prefer container-safe URL for builds, fall back to generic
+_UV_URL_FOR_BUILD="${UV_INDEX_URL_BUILD:-${UV_INDEX_URL:-}}"
+if [ -n "${_UV_URL_FOR_BUILD}" ]; then
+    BUILD_CMD="$BUILD_CMD --build-arg UV_INDEX_URL=\"$_UV_URL_FOR_BUILD\""
 fi
 if [ -n "${UV_EXTRA_INDEX_URL:-}" ]; then
     BUILD_CMD="$BUILD_CMD --build-arg UV_EXTRA_INDEX_URL=\"$UV_EXTRA_INDEX_URL\""
@@ -49,6 +51,12 @@ if [ -n "${PIP_EXTRA_INDEX_URL:-}" ]; then
 fi
 if [ -n "${CACHE_BUST:-}" ]; then
     BUILD_CMD="$BUILD_CMD --build-arg CACHE_BUST=\"$CACHE_BUST\""
+fi
+if [ -n "${VITE_API_URL:-}" ]; then
+    BUILD_CMD="$BUILD_CMD --build-arg VITE_API_URL=\"$VITE_API_URL\""
+fi
+if [ -n "${VITE_MEDIA_BASE_URL:-}" ]; then
+    BUILD_CMD="$BUILD_CMD --build-arg VITE_MEDIA_BASE_URL=\"$VITE_MEDIA_BASE_URL\""
 fi
 
 # Add tags and build context

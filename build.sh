@@ -21,21 +21,26 @@ fi
 
 # ✅ Modular and conditional execution
 if [[ "${SKIP_LINT:-false}" != "true" ]]; then
+  log_info "🔄 Running lint..."
   "$KEEPSAKE_SCRIPTS_ROOT/lint.sh"
 fi
 
 if [[ "${SKIP_TESTS:-false}" != "true" ]]; then
+  log_info "🔄 Running tests..."
   "$KEEPSAKE_SCRIPTS_ROOT/test.sh"
 fi
 
 if [[ "${SKIP_WHEEL:-false}" != "true" ]]; then
+  log_info "🔄 Building wheel..."
   "$KEEPSAKE_SCRIPTS_ROOT/build-wheel.sh"
 fi
 
 if [[ "${SKIP_DOCKER_IMAGE:-false}" != "true" ]]; then
+  log_info "🔄 Building Docker image..."
   "$KEEPSAKE_SCRIPTS_ROOT/build-docker-image.sh"
 fi
 
 if [[ "${SKIP_K8S_DEPLOY:-false}" != "true" && "${K8S_DEPLOY:-false}" = "true" ]]; then
+  log_info "🔄 Deploying to Kubernetes..."
   "$KEEPSAKE_SCRIPTS_ROOT/deploy-k8s.sh"
 fi
