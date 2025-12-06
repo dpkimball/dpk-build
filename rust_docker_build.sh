@@ -67,50 +67,10 @@ if [ -n "${COMPOSE_SERVICE:-}" ]; then
   log_success "✅ Container for $COMPOSE_SERVICE restarted with updated image"
 fi
 
-# Deploy to Kubernetes if K8S_DEPLOY is specified
+# Deploy to Kubernetes if K8S_DEPLOY is specified (use shared deploy-k8s.sh like Python)
 if [ "${K8S_DEPLOY:-false}" = "true" ]; then
   log_info "🚀 Deploying to Kubernetes..."
-  
-  # Load image into Kubernetes cluster
-  if kubectl config current-context | grep -q "kind"; then
-    log_info "🐳 Loading image into Kind cluster..."
-    kind load docker-image "$IMAGE_NAME:latest" --name "${KIND_CLUSTER:-keepsake-dev}"
-  elif kubectl config current-context | grep -q "docker-desktop\|rancher-desktop"; then
-    log_info "🐳 Using Docker Desktop/Rancher Desktop (image already available)"
-  elif kubectl config current-context | grep -q "minikube"; then
-    log_info "🐳 Loading image into Minikube..."
-    minikube image load "$IMAGE_NAME:latest"
-  else
-    log_warning "⚠️  Unknown Kubernetes cluster type. Image may not be available."
-  fi
-  
-  # Update Helm deployment
-  HELM_RELEASE="${HELM_RELEASE:-$IMAGE_NAME}"
-  K8S_NAMESPACE="${K8S_NAMESPACE:-dev}"
-  HELM_CHART_PATH="${HELM_CHART_PATH:-../keepsake-infra/charts/$IMAGE_NAME}"
-  
-  log_info "📦 Updating Helm release: $HELM_RELEASE in namespace: $K8S_NAMESPACE"
-  log_info "📁 Using chart path: $HELM_CHART_PATH"
-  
-  # Check if chart path exists
-  if [[ ! -d "$HELM_CHART_PATH" ]]; then
-    log_error "❌ Helm chart not found at: $HELM_CHART_PATH"
-    log_error "   Please set HELM_CHART_PATH to the correct chart directory"
-    exit 1
-  fi
-  
-  # Update the image in the Helm values
-  helm upgrade "$HELM_RELEASE" \
-    --namespace "$K8S_NAMESPACE" \
-    --set image.repository="$IMAGE_NAME" \
-    --set image.tag="latest" \
-    --set image.pullPolicy="Never" \
-    "$HELM_CHART_PATH" || {
-    log_error "❌ Helm upgrade failed"
-    exit 1
-  }
-  
-  log_success "✅ Kubernetes deployment updated with local image"
+  "$KEEPSAKE_SCRIPTS_ROOT/deploy-k8s.sh"
 else
   log_info "💡 To deploy to Kubernetes, set K8S_DEPLOY=true"
 fi

@@ -20,10 +20,14 @@ ESCAPED_NAME=$(echo "$PACKAGE_NAME" | sed 's/-/_/g')
 ESCAPED_NAME=$(echo "$PACKAGE_NAME" | sed 's/[]\/$*.^[]/\\&/g')
 
 # Replace "name==<version>", "name>=<version>", or "name~=<version>" inside dependencies block
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  sed -i '' -E "s/(\"${ESCAPED_NAME}(\[[^]]+\\])?[>=~=]+)[^\"]*\"/\1${LATEST_VERSION}\"/" "$PYPROJECT_FILE"
+# Check if package exists in file first
+if grep -q "\"${PACKAGE_NAME}" "$PYPROJECT_FILE"; then
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' -E "s/(\"${ESCAPED_NAME}(\[[^]]+\\])?[>=~=]+)[^\"]*\"/\1${LATEST_VERSION}\"/" "$PYPROJECT_FILE"
+  else
+    sed -i -E "s/(\"${ESCAPED_NAME}(\[[^]]+\\])?[>=~=]+)[^\"]*\"/\1${LATEST_VERSION}\"/" "$PYPROJECT_FILE"
+  fi
+  echo "📝 Updated $PACKAGE_NAME version to >=${LATEST_VERSION} in $PYPROJECT_FILE"
 else
-  sed -i -E "s/(\"${ESCAPED_NAME}(\[[^]]+\\])?[>=~=]+)[^\"]*\"/\1${LATEST_VERSION}\"/" "$PYPROJECT_FILE"
+  echo "⚠️  $PACKAGE_NAME not found in dependencies, skipping update"
 fi
-
-echo "📝 Updated $PACKAGE_NAME version to ==$LATEST_VERSION in $PYPROJECT_FILE"

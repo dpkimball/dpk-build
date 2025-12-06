@@ -6,12 +6,10 @@ source "$(dirname "$0")/common.sh"
 
 IMAGE_NAME="${IMAGE_NAME:-my_image}"
 DOCKERFILE_DIR="${DOCKERFILE_DIR:-.}"
-COMPOSE_SERVICE="${COMPOSE_SERVICE:-}"
-SKIP_TESTS="${SKIP_TESTS:-true}"
 CLEAN="${CLEAN:-false}"
 CLEANUP_OLD_IMAGES="${CLEANUP_OLD_IMAGES:-true}"
 
-print_status "🔍 Config: IMAGE_NAME=$IMAGE_NAME | CLEAN=$CLEAN | SKIP_TESTS=$SKIP_TESTS | COMPOSE_SERVICE=$COMPOSE_SERVICE"
+print_status "🔍 Config: IMAGE_NAME=$IMAGE_NAME | CLEAN=$CLEAN"
 
 if [ "$CLEAN" = true ]; then
   print_status "🧼 Cleaning previous Docker artifacts..."
@@ -73,27 +71,4 @@ if [ "$CLEANUP_OLD_IMAGES" = true ]; then
   # Remove all old versions of this image, keeping only 'latest' and the current DATE_TAG
   docker images "$IMAGE_NAME" --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -v "latest" | grep -v "$DATE_TAG" | awk '{print $1}' | xargs -r docker rmi || true
   print_status "✅ Old images cleaned up"
-fi
-
-if [ "$SKIP_TESTS" != true ]; then
-  if [ -f "./test.sh" ]; then
-    ./test.sh || print_warning "⚠ Tests failed"
-  else
-    print_warning "⚠ No test.sh found, skipping tests"
-  fi
-fi
-
-# Deploy to Kubernetes if K8S_DEPLOY is specified (backward compatibility)
-if [ "${K8S_DEPLOY:-false}" = "true" ]; then
-  "$KEEPSAKE_SCRIPTS_ROOT/deploy-k8s.sh"
-elif [ -n "$COMPOSE_SERVICE" ]; then
-  print_status "🔄 Replacing running container for service: $COMPOSE_SERVICE"
-
-  docker compose -f "$KEEPSAKE_COMPOSE_PROJECT_ROOT/docker-compose.yml" stop "$COMPOSE_SERVICE" || true
-  docker compose -f "$KEEPSAKE_COMPOSE_PROJECT_ROOT/docker-compose.yml" rm -f "$COMPOSE_SERVICE" || true
-  docker compose -f "$KEEPSAKE_COMPOSE_PROJECT_ROOT/docker-compose.yml" up -d --no-deps "$COMPOSE_SERVICE"
-
-  print_status "✅ Container for $COMPOSE_SERVICE restarted with updated image"
-else
-  print_warning "⚠ No COMPOSE_SERVICE or K8S_DEPLOY specified, skipping container restart"
 fi
