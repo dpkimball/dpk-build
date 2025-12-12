@@ -79,7 +79,7 @@ export UV_INDEX_URL="${UV_INDEX_URL:-$UV_INDEX_URL_TEST}"
 # =============================================================================
 export K8S_DEPLOY="${K8S_DEPLOY:-true}"
 export K8S_NAMESPACE="${K8S_NAMESPACE:-dev}"
-export QA_BOX_IP="${QA_BOX_IP:-192.168.86.23}"
+export QA_BOX_IP="${QA_BOX_IP:-192.168.86.47}"
 
 # =============================================================================
 # Compatibility Aliases (for code that uses different variable names)
