@@ -183,15 +183,32 @@ if [[ -n "${HELM_RELEASES:-}" ]]; then
       exit 1
     fi
 
+    # Determine image name for this release
+    # Default to release name if IMAGE_NAME doesn't match, or use IMAGE_NAME if it matches release
+    if [[ "$release" == *"frontend"* ]] && [[ "$IMAGE_NAME" != *"frontend"* ]]; then
+      # Release is frontend but IMAGE_NAME is backend - use release name as image
+      RELEASE_IMAGE_NAME="$release"
+    elif [[ "$release" == *"backend"* ]] && [[ "$IMAGE_NAME" != *"backend"* ]]; then
+      # Release is backend but IMAGE_NAME is frontend - use release name as image
+      RELEASE_IMAGE_NAME="$release"
+    else
+      # Use IMAGE_NAME as-is (matches release or is generic)
+      RELEASE_IMAGE_NAME="$IMAGE_NAME"
+    fi
+
+    print_status "🖼️  Using image: $RELEASE_IMAGE_NAME:latest"
+
     # Update the image in the Helm values
-    helm upgrade "$release" \
+    # Use --install to create release if it doesn't exist
+    helm upgrade --install "$release" \
       --namespace "$K8S_NAMESPACE" \
+      --create-namespace \
       --values "$HELM_CHART_PATH/values-dev.yaml" \
-      --set image.repository="$IMAGE_NAME" \
+      --set image.repository="$RELEASE_IMAGE_NAME" \
       --set image.tag="latest" \
       --set image.pullPolicy="Never" \
       "$HELM_CHART_PATH" || {
-      print_error "❌ Helm upgrade failed for $release"
+      print_error "❌ Helm upgrade/install failed for $release"
       exit 1
     }
 
@@ -216,14 +233,16 @@ else
   fi
 
   # Update the image in the Helm values
-  helm upgrade "$HELM_RELEASE" \
+  # Use --install to create release if it doesn't exist
+  helm upgrade --install "$HELM_RELEASE" \
     --namespace "$K8S_NAMESPACE" \
+    --create-namespace \
     --values "$HELM_CHART_PATH/values-dev.yaml" \
     --set image.repository="$IMAGE_NAME" \
     --set image.tag="latest" \
     --set image.pullPolicy="Never" \
     "$HELM_CHART_PATH" || {
-    print_error "❌ Helm upgrade failed"
+    print_error "❌ Helm upgrade/install failed"
     exit 1
   }
 

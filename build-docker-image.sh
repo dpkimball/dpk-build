@@ -29,10 +29,24 @@ fi
 print_status "🐳 Building Docker image..."
 DATE_TAG=$(date +"%Y%m%d-%H%M")
 
+# Debug: Show UV_INDEX_URL_BUILD before build
+_UV_URL_FOR_BUILD="${UV_INDEX_URL_BUILD:-${UV_INDEX_URL:-}}"
+print_status "🔍 Debug: UV_INDEX_URL_BUILD=${UV_INDEX_URL_BUILD:-not set}"
+print_status "🔍 Debug: UV_INDEX_URL=${UV_INDEX_URL:-not set}"
+print_status "🔍 Debug: Using for build: ${_UV_URL_FOR_BUILD:-not set}"
+
 # Build command with optional build arguments
+# Use --pull=false when DOCKER_BUILD_PULL is set to false (for local images)
 BUILD_CMD="docker build --network host"
+if [ "${DOCKER_BUILD_PULL:-}" = "false" ]; then
+    BUILD_CMD="$BUILD_CMD --pull=false"
+fi
 
 # Add build arguments if environment variables are set
+# BASE_IMAGE: Use local base image if available, otherwise use GHCR
+if [ -n "${BASE_IMAGE:-}" ]; then
+    BUILD_CMD="$BUILD_CMD --build-arg BASE_IMAGE=\"$BASE_IMAGE\""
+fi
 # Prefer container-safe URL for builds, fall back to generic
 _UV_URL_FOR_BUILD="${UV_INDEX_URL_BUILD:-${UV_INDEX_URL:-}}"
 if [ -n "${_UV_URL_FOR_BUILD}" ]; then

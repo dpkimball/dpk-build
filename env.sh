@@ -20,13 +20,15 @@ export PYPI_PACKAGE_DIR="${PYPI_PACKAGE_DIR:-$KEEPSAKE_PROJECT_ROOT/keepsake-pyp
 # =============================================================================
 # Service Ports (DEV environment - shared across all projects)
 # =============================================================================
+# These match the NodePorts in keepsake-dev Kubernetes cluster
+# Backend uses 31325 to match QA for consistency
 export KEEPSAKE_BACKEND_PORT="${KEEPSAKE_BACKEND_PORT:-31325}"
-export KEEPSAKE_FRONTEND_PORT="${KEEPSAKE_FRONTEND_PORT:-32686}"
+export KEEPSAKE_FRONTEND_PORT="${KEEPSAKE_FRONTEND_PORT:-30004}"
 export KEEPSAKE_PYPI_PORT="${KEEPSAKE_PYPI_PORT:-31126}"
-export KEEPSAKE_MEMORY_GRAPH_PORT="${KEEPSAKE_MEMORY_GRAPH_PORT:-31605}"
+export DPK_PORT="${DPK_PORT:-31605}"
 export KEEPSAKE_MONGO_PORT="${KEEPSAKE_MONGO_PORT:-32643}"
-export KEEPSAKE_LANGGRAPH_PORT="${KEEPSAKE_LANGGRAPH_PORT:-31224}"
-export KEEPSAKE_BRAIN_VIEWER_PORT="${KEEPSAKE_BRAIN_VIEWER_PORT:-32196}"
+export KEEPSAKE_LANGGRAPH_PORT="${KEEPSAKE_LANGGRAPH_PORT:-30080}"
+export DPK_DASHBOARD_PORT="${DPK_DASHBOARD_PORT:-32196}"
 
 # =============================================================================
 # Service URLs (local development - shared across all projects)
@@ -37,8 +39,8 @@ export KEEPSAKE_PYPI_URL="http://localhost:${KEEPSAKE_PYPI_PORT}"
 export KEEPSAKE_API_URL="${KEEPSAKE_BACKEND_URL}/api"
 export KEEPSAKE_API_V1_URL="${KEEPSAKE_BACKEND_URL}/api/v1"
 export LANGGRAPH_URL="http://localhost:${KEEPSAKE_LANGGRAPH_PORT}"
-export MEMORY_GRAPH_URL="http://localhost:${KEEPSAKE_MEMORY_GRAPH_PORT}"
-export BRAIN_VIEWER_URL="http://localhost:${KEEPSAKE_BRAIN_VIEWER_PORT}"
+export MEMORY_GRAPH_URL="http://localhost:${DPK_PORT}"
+export DPK_DASHBOARD_URL="http://localhost:${DPK_DASHBOARD_PORT}"
 export KEEPSAKE_MONGO_URI="${KEEPSAKE_MONGO_URI:-mongodb://keepsake_user:keepsake_pass@localhost:${KEEPSAKE_MONGO_PORT}/keepsake?authSource=keepsake}"
 
 # =============================================================================
