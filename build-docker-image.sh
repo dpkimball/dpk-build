@@ -27,7 +27,7 @@ if [ "${CLEANUP_ALL_OLD_IMAGES:-false}" = true ]; then
 fi
 
 print_status "🐳 Building Docker image..."
-DATE_TAG=$(date +"%Y%m%d-%H%M")
+DATE_TAG="${DATE_TAG:-$(date +"%Y%m%d-%H%M")}"
 
 # Debug: Show UV_INDEX_URL_BUILD before build
 _UV_URL_FOR_BUILD="${UV_INDEX_URL_BUILD:-${UV_INDEX_URL:-}}"
@@ -78,6 +78,39 @@ BUILD_CMD="$BUILD_CMD -t \"$IMAGE_NAME:latest\" -t \"$IMAGE_NAME:$DATE_TAG\" \"$
 eval $BUILD_CMD
 
 print_status "✅ Build complete. Tagged as $DATE_TAG"
+
+# Push to local registry if enabled
+if [ "${PUSH_TO_REGISTRY:-false}" = "true" ]; then
+  # Source env.sh to get registry URL if available
+  if [ -f "${KEEPSAKE_SCRIPTS_ROOT:-}/env.sh" ]; then
+    source "${KEEPSAKE_SCRIPTS_ROOT}/env.sh"
+  fi
+  
+  REGISTRY_URL="${DOCKER_REGISTRY_URL:-localhost:30500}"
+  print_status "📤 Pushing to local registry at $REGISTRY_URL..."
+  
+  # Push both latest and date-tagged versions
+  for TAG in latest "$DATE_TAG"; do
+    REGISTRY_TAG="$REGISTRY_URL/$IMAGE_NAME:$TAG"
+    print_status "🏷️  Tagging as $REGISTRY_TAG..."
+    docker tag "$IMAGE_NAME:$TAG" "$REGISTRY_TAG" || {
+      print_error "Failed to tag $IMAGE_NAME:$TAG"
+      exit 1
+    }
+    
+    print_status "📤 Pushing $REGISTRY_TAG..."
+    docker push "$REGISTRY_TAG" || {
+      print_error "Failed to push $REGISTRY_TAG. Is registry running at $REGISTRY_URL?"
+      exit 1
+    }
+    print_status "✅ Pushed $REGISTRY_TAG"
+  done
+  
+  print_status "✅ All images pushed to registry"
+  print_status "📝 Use in Helm charts:"
+  print_status "  repository: ${DOCKER_REGISTRY_CLUSTER_URL:-docker-registry-service.dev.svc.cluster.local:5000}/$IMAGE_NAME"
+  print_status "  tag: latest (or $DATE_TAG)"
+fi
 
 # Clean up old images to save disk space
 if [ "$CLEANUP_OLD_IMAGES" = true ]; then

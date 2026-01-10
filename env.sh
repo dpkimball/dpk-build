@@ -32,6 +32,7 @@ export KEEPSAKE_LANGGRAPH_PORT="${KEEPSAKE_LANGGRAPH_PORT:-30080}"
 export DPK_DASHBOARD_PORT="${DPK_DASHBOARD_PORT:-30002}"
 export CLICKHOUSE_HTTP_PORT="${CLICKHOUSE_HTTP_PORT:-31234}"
 export CLICKHOUSE_TCP_PORT="${CLICKHOUSE_TCP_PORT:-31235}"
+export DOCKER_REGISTRY_PORT="${DOCKER_REGISTRY_PORT:-30500}"
 
 # =============================================================================
 # Service URLs (local development - shared across all projects)
@@ -47,6 +48,8 @@ export MEMORY_GRAPH_URL="http://localhost:${DPK_PORT}"
 export DPK_DASHBOARD_URL="http://localhost:${DPK_DASHBOARD_PORT}"
 export KEEPSAKE_MONGO_URI="${KEEPSAKE_MONGO_URI:-mongodb://keepsake_user:keepsake_pass@localhost:${KEEPSAKE_MONGO_PORT}/keepsake?authSource=keepsake}"
 export CLICKHOUSE_HTTP_URL="http://localhost:${CLICKHOUSE_HTTP_PORT}"
+export DOCKER_REGISTRY_URL="${DOCKER_REGISTRY_URL:-localhost:${DOCKER_REGISTRY_PORT}}"
+export DOCKER_REGISTRY_CLUSTER_URL="${DOCKER_REGISTRY_CLUSTER_URL:-docker-registry-service.dev.svc.cluster.local:5000}"
 
 # =============================================================================
 # API Endpoints (derived from service URLs)
