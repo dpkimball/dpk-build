@@ -196,7 +196,11 @@ if [[ -n "${HELM_RELEASES:-}" ]]; then
       RELEASE_IMAGE_NAME="$IMAGE_NAME"
     fi
 
-    print_status "🖼️  Using image: $RELEASE_IMAGE_NAME:latest"
+    # Construct registry URL for image repository
+    REGISTRY_URL="${DOCKER_REGISTRY_URL:-localhost:30500}"
+    RELEASE_IMAGE_REPOSITORY="$REGISTRY_URL/$RELEASE_IMAGE_NAME"
+    
+    print_status "🖼️  Using image: $RELEASE_IMAGE_REPOSITORY:latest"
 
     # Update the image in the Helm values
     # Use --install to create release if it doesn't exist
@@ -204,9 +208,9 @@ if [[ -n "${HELM_RELEASES:-}" ]]; then
       --namespace "$K8S_NAMESPACE" \
       --create-namespace \
       --values "$HELM_CHART_PATH/values-dev.yaml" \
-      --set image.repository="$RELEASE_IMAGE_NAME" \
+      --set image.repository="$RELEASE_IMAGE_REPOSITORY" \
       --set image.tag="latest" \
-      --set image.pullPolicy="Never" \
+      --set image.pullPolicy="Always" \
       "$HELM_CHART_PATH" || {
       print_error "❌ Helm upgrade/install failed for $release"
       exit 1
@@ -232,15 +236,19 @@ else
     exit 1
   fi
 
+  # Construct registry URL for image repository
+  REGISTRY_URL="${DOCKER_REGISTRY_URL:-localhost:30500}"
+  IMAGE_REPOSITORY="$REGISTRY_URL/$IMAGE_NAME"
+  
   # Update the image in the Helm values
   # Use --install to create release if it doesn't exist
   helm upgrade --install "$HELM_RELEASE" \
     --namespace "$K8S_NAMESPACE" \
     --create-namespace \
     --values "$HELM_CHART_PATH/values-dev.yaml" \
-    --set image.repository="$IMAGE_NAME" \
+    --set image.repository="$IMAGE_REPOSITORY" \
     --set image.tag="latest" \
-    --set image.pullPolicy="Never" \
+    --set image.pullPolicy="Always" \
     "$HELM_CHART_PATH" || {
     print_error "❌ Helm upgrade/install failed"
     exit 1

@@ -14,7 +14,17 @@ if [[ "${1:-}" == "--clean" || ! -d "$PROJECT_VENV_DIR" || ! -f "$PROJECT_VENV_D
   uv virtualenv --python="$PYTHON_VERSION" "$PROJECT_VENV_DIR"
   source "$PROJECT_VENV_DIR/bin/activate"
   log_info "🔄 Installing all dependencies (including dev)..."
-  uv sync --dev
+  # Explicitly set index URLs to ensure local PyPI is checked first (platform-specific)
+  # Use unsafe-best-match to allow checking all indexes when package exists on public PyPI but has no versions
+  if [[ -n "${UV_INDEX_URL:-}" ]]; then
+    if [[ -n "${UV_EXTRA_INDEX_URL:-}" ]]; then
+      uv sync --dev --default-index "$UV_INDEX_URL" --index "$UV_EXTRA_INDEX_URL" --index-strategy unsafe-best-match
+    else
+      uv sync --dev --default-index "$UV_INDEX_URL" --index-strategy unsafe-best-match
+    fi
+  else
+    uv sync --dev
+  fi
 else
   source "$PROJECT_VENV_DIR/bin/activate"
 fi

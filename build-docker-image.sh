@@ -7,6 +7,7 @@ source "$(dirname "$0")/common.sh"
 IMAGE_NAME="${IMAGE_NAME:-my_image}"
 DOCKERFILE_DIR="${DOCKERFILE_DIR:-.}"
 CLEAN="${CLEAN:-false}"
+# Always cleanup old images - this is not optional
 CLEANUP_OLD_IMAGES="${CLEANUP_OLD_IMAGES:-true}"
 
 print_status "🔍 Config: IMAGE_NAME=$IMAGE_NAME | CLEAN=$CLEAN"
@@ -24,6 +25,37 @@ if [ "${CLEANUP_ALL_OLD_IMAGES:-false}" = true ]; then
   # Remove all images except the ones we just built
   docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -v "REPOSITORY" | grep -v "$IMAGE_NAME:latest" | grep -v "$IMAGE_NAME:$DATE_TAG" | awk '{print $1}' | xargs -r docker rmi || true
   print_status "✅ All old images cleaned up"
+fi
+
+# Clean up old images BEFORE building to free space (critical to prevent disk fill)
+print_status "🧹 Pre-build cleanup: Removing old images to free space..."
+REGISTRY_URL="${DOCKER_REGISTRY_URL:-localhost:30500}"
+
+if [ "$CLEANUP_OLD_IMAGES" = true ]; then
+  # Remove ALL old date-tagged images for this repository (keep only the most recent one if any)
+  # This prevents accumulation when builds fail or are interrupted
+  OLD_DATE_TAGS=$(docker images "$IMAGE_NAME" --format "{{.Repository}}:{{.Tag}}" 2>/dev/null | \
+    grep -E "^$IMAGE_NAME:[0-9]{8}-[0-9]{4}$" | sort -r | tail -n +2)
+  if [ -n "$OLD_DATE_TAGS" ]; then
+    echo "$OLD_DATE_TAGS" | xargs -r docker rmi -f 2>/dev/null || true
+    print_status "✅ Removed old date-tagged images"
+  fi
+  
+  # Remove all orphaned <none> tagged images for this repository
+  docker images "$IMAGE_NAME" --format "{{.ID}}\t{{.Tag}}" 2>/dev/null | \
+    grep -E "\t<none>" | awk '{print $1}' | \
+    xargs -r docker rmi -f 2>/dev/null || true
+  
+  # Clean up registry images: remove all except latest (including <none> tags)
+  if [ "${PUSH_TO_REGISTRY:-false}" = "true" ]; then
+    docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.Repository}}:{{.Tag}}\t{{.ID}}" 2>/dev/null | \
+      grep -v "REPOSITORY" | grep -v "^$REGISTRY_URL/$IMAGE_NAME:latest" | \
+      awk '{print $1}' | xargs -r docker rmi -f 2>/dev/null || true
+    
+    docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.ID}}\t{{.Tag}}" 2>/dev/null | \
+      grep -E "\t<none>" | awk '{print $1}' | \
+      xargs -r docker rmi -f 2>/dev/null || true
+  fi
 fi
 
 print_status "🐳 Building Docker image..."
@@ -72,7 +104,8 @@ if [ -n "${VITE_MEDIA_BASE_URL:-}" ]; then
 fi
 
 # Add tags and build context
-BUILD_CMD="$BUILD_CMD -t \"$IMAGE_NAME:latest\" -t \"$IMAGE_NAME:$DATE_TAG\" \"$DOCKERFILE_DIR\""
+# Build with date tag for local tracking, then tag as 'latest' for registry push
+BUILD_CMD="$BUILD_CMD -t \"$IMAGE_NAME:$DATE_TAG\" \"$DOCKERFILE_DIR\""
 
 # Execute the build command
 eval $BUILD_CMD
@@ -89,33 +122,73 @@ if [ "${PUSH_TO_REGISTRY:-false}" = "true" ]; then
   REGISTRY_URL="${DOCKER_REGISTRY_URL:-localhost:30500}"
   print_status "📤 Pushing to local registry at $REGISTRY_URL..."
   
-  # Push both latest and date-tagged versions
-  for TAG in latest "$DATE_TAG"; do
-    REGISTRY_TAG="$REGISTRY_URL/$IMAGE_NAME:$TAG"
-    print_status "🏷️  Tagging as $REGISTRY_TAG..."
-    docker tag "$IMAGE_NAME:$TAG" "$REGISTRY_TAG" || {
-      print_error "Failed to tag $IMAGE_NAME:$TAG"
-      exit 1
-    }
-    
-    print_status "📤 Pushing $REGISTRY_TAG..."
-    docker push "$REGISTRY_TAG" || {
-      print_error "Failed to push $REGISTRY_TAG. Is registry running at $REGISTRY_URL?"
-      exit 1
-    }
-    print_status "✅ Pushed $REGISTRY_TAG"
-  done
+  # Tag the date-tagged image as 'latest' for registry push
+  docker tag "$IMAGE_NAME:$DATE_TAG" "$IMAGE_NAME:latest" || {
+    print_error "Failed to tag $IMAGE_NAME:$DATE_TAG as latest"
+    exit 1
+  }
   
+  # Push 'latest' to registry
+  REGISTRY_TAG="$REGISTRY_URL/$IMAGE_NAME:latest"
+  print_status "🏷️  Tagging as $REGISTRY_TAG..."
+  docker tag "$IMAGE_NAME:latest" "$REGISTRY_TAG" || {
+    print_error "Failed to tag $IMAGE_NAME:latest"
+    exit 1
+  }
+  
+  print_status "📤 Pushing $REGISTRY_TAG..."
+  docker push "$REGISTRY_TAG" || {
+    print_error "Failed to push $REGISTRY_TAG. Is registry running at $REGISTRY_URL?"
+    exit 1
+  }
+  print_status "✅ Pushed $REGISTRY_TAG"
+  
+  # Post-push cleanup: remove intermediate tags and old images
+  print_status "🧹 Post-push cleanup..."
+  
+  # Remove local 'latest' tag after push (keep only date-tagged locally)
+  docker rmi "$IMAGE_NAME:latest" 2>/dev/null || true
+  
+  # Clean up old registry-tagged images (keep only latest)
+  docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.Repository}}:{{.Tag}}\t{{.ID}}" 2>/dev/null | \
+    grep -v "REPOSITORY" | grep -v "^$REGISTRY_URL/$IMAGE_NAME:latest" | \
+    awk '{print $1}' | xargs -r docker rmi -f 2>/dev/null || true
+  
+  # Remove ALL orphaned <none> tagged images for this repository
+  docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.ID}}\t{{.Tag}}" 2>/dev/null | \
+    grep -E "\t<none>" | awk '{print $1}' | \
+    xargs -r docker rmi -f 2>/dev/null || true
+  
+  print_status "✅ Registry images cleaned up"
   print_status "✅ All images pushed to registry"
   print_status "📝 Use in Helm charts:"
   print_status "  repository: ${DOCKER_REGISTRY_CLUSTER_URL:-docker-registry-service.dev.svc.cluster.local:5000}/$IMAGE_NAME"
-  print_status "  tag: latest (or $DATE_TAG)"
+  print_status "  tag: latest"
 fi
 
-# Clean up old images to save disk space
+# Final cleanup: ensure we only keep what we need
 if [ "$CLEANUP_OLD_IMAGES" = true ]; then
-  print_status "🧹 Cleaning up old Docker images..."
-  # Remove all old versions of this image, keeping only 'latest' and the current DATE_TAG
-  docker images "$IMAGE_NAME" --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -v "latest" | grep -v "$DATE_TAG" | awk '{print $1}' | xargs -r docker rmi || true
-  print_status "✅ Old images cleaned up"
+  print_status "🧹 Final cleanup: removing old date-tagged images..."
+  
+  # Remove old date-tagged local images (keep only current DATE_TAG)
+  # Match pattern: IMAGE_NAME:YYYYMMDD-HHMM
+  docker images "$IMAGE_NAME" --format "{{.Repository}}:{{.Tag}}" 2>/dev/null | \
+    grep -E "^$IMAGE_NAME:[0-9]{8}-[0-9]{4}$" | \
+    grep -v "^$IMAGE_NAME:$DATE_TAG$" | \
+    xargs -r docker rmi -f 2>/dev/null || true
+  
+  # Final pass: remove any remaining orphaned <none> tags
+  docker images "$IMAGE_NAME" --format "{{.ID}}\t{{.Tag}}" 2>/dev/null | \
+    grep -E "\t<none>" | awk '{print $1}' | \
+    xargs -r docker rmi -f 2>/dev/null || true
+  
+  if [ "${PUSH_TO_REGISTRY:-false}" = "true" ]; then
+    REGISTRY_URL="${DOCKER_REGISTRY_URL:-localhost:30500}"
+    # Final pass on registry images: remove orphaned <none> tags
+    docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.ID}}\t{{.Tag}}" 2>/dev/null | \
+      grep -E "\t<none>" | awk '{print $1}' | \
+      xargs -r docker rmi -f 2>/dev/null || true
+  fi
+  
+  print_status "✅ Final cleanup complete"
 fi
