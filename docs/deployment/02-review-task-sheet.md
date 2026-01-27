@@ -1,3 +1,8 @@
+---
+title: Documentation Review Task Sheet
+description: Documentation about documentation review task sheet
+category: deployment
+---
 # Documentation Review Task Sheet
 
 This tracker captures the documentation audit for `memory-graph-service`. Update statuses as each section is aligned with the current codebase.

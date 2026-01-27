@@ -1,7 +1,22 @@
 # Memory Graph Service Documentation
+## Overview
 
-This directory describes the production behavior of the Rust gRPC service. Each section links directly to the files that mirror the current implementation under `src/`, `tests/`, and `.github/`.
+## Responsibilities
 
+## Non-Responsibilities
+
+## System Context
+
+## Usage
+
+## Configuration Summary
+
+## Extended Documentation
+
+## Lifecycle Status
+
+
+Active
 ## Architecture
 - `architecture/three_tier_flow.md` – illustrates how requests traverse `src/service/**`, `src/application/**`, and `src/dal/**`, using `MemoryServiceV2` as the canonical example.
 - `architecture/04-application-service-usage.md` – enumerates every application service, the repositories it drives, and the gRPC handlers that invoke it.
@@ -34,7 +49,7 @@ This directory describes the production behavior of the Rust gRPC service. Each 
 - `design/diagrams/*` – Mermaid diagrams consumed by the architecture docs (kept in sync with the specs above).
 
 ## Task Tracking
-- `task_sheet.md` – live checklist for the current documentation audit. Each row records comparison notes between docs and code (`src/`, `tests/`, `.github/`).
+- `01-review-task-sheet.md` – live checklist for the current documentation audit. Each row records comparison notes between docs and code (`src/`, `tests/`, `.github/`).
 
 Need a starting point? Read `README.md` in the repository root, then dive into the sections above based on the task at hand.
 # Memory Graph Service Documentation
@@ -73,7 +88,7 @@ This directory describes the production behavior of the Rust gRPC service. Each 
 - `design/diagrams/*` – Mermaid diagrams consumed by the architecture docs (kept in sync with the specs above).
 
 ## Task Tracking
-- `task_sheet.md` – live checklist for the current documentation audit. Each row records comparison notes between docs and code (`src/`, `tests/`, `.github/`).
+- `01-review-task-sheet.md` – live checklist for the current documentation audit. Each row records comparison notes between docs and code (`src/`, `tests/`, `.github/`).
 
 Need a starting point? Read `README.md` in the repository root, then dive into the sections above based on the task at hand.
 # 📚 Memory Graph Service Documentation
@@ -94,11 +109,11 @@ Living documentation for every part of the service. Each file describes the **cu
 | `examples/` | Concrete payloads for synopsis/context flows. |
 | `cursor_todos/` | Environment-variable checklist for Cursor assistants. |
 | `sync-environment-variables.md` | Required exports for running `sync_all` and schema binaries. |
-| `doc-review-task-sheet.md` | Tracker for this doc-alignment effort. |
+| `01-memory-graph-service-review-task-sheet.md` | Tracker for this doc-alignment effort. |
 
 ---
 
-## 🏗️ Architecture (`architecture/`)
+## 🏗 Architecture (`architecture/`)
 
 | File | Description |
 | --- | --- |

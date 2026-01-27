@@ -1,3 +1,8 @@
+---
+title: Architecture Folder Structure
+description: Documentation about architecture folder structure
+category: architecture
+---
 # Architecture Folder Structure
 
 Snapshot of how the repository maps to the three-tier architecture as of November 2025.
