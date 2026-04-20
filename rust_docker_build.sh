@@ -13,6 +13,8 @@ IMAGE_NAME="${IMAGE_NAME:-memory-graph-service}"
 DOCKERFILE_DIR="${DOCKERFILE_DIR:-.}"
 CLEAN="${CLEAN:-false}"
 SKIP_TESTS="${SKIP_TESTS:-false}"
+PUSH_TO_REGISTRY="${PUSH_TO_REGISTRY:-true}"
+DOCKER_REGISTRY_URL="${DOCKER_REGISTRY_URL:-localhost:30500}"
 
 log_info "🔍 Config: IMAGE_NAME=$IMAGE_NAME | CLEAN=$CLEAN | SKIP_TESTS=$SKIP_TESTS"
 
@@ -54,6 +56,19 @@ if [ "$SKIP_TESTS" != true ]; then
   timeout 5s docker run --rm "$IMAGE_NAME:latest" || {
     log_info "⚠️  Container test completed (expected timeout for gRPC server)"
   }
+fi
+
+if [ "$PUSH_TO_REGISTRY" = true ]; then
+  REMOTE_IMAGE="${DOCKER_REGISTRY_URL}/${IMAGE_NAME}"
+  log_info "📤 Pushing image to local registry: ${REMOTE_IMAGE}"
+
+  docker tag "${IMAGE_NAME}:latest" "${REMOTE_IMAGE}:latest"
+  docker tag "${IMAGE_NAME}:${DATE_TAG}" "${REMOTE_IMAGE}:${DATE_TAG}"
+
+  docker push "${REMOTE_IMAGE}:latest"
+  docker push "${REMOTE_IMAGE}:${DATE_TAG}"
+
+  log_success "✅ Pushed to ${REMOTE_IMAGE} (latest, ${DATE_TAG})"
 fi
 
 # Launch container if COMPOSE_SERVICE is specified (following Python pattern)

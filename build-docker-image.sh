@@ -35,7 +35,7 @@ if [ "$CLEANUP_OLD_IMAGES" = true ]; then
   # Remove ALL old date-tagged images for this repository (keep only the most recent one if any)
   # This prevents accumulation when builds fail or are interrupted
   OLD_DATE_TAGS=$(docker images "$IMAGE_NAME" --format "{{.Repository}}:{{.Tag}}" 2>/dev/null | \
-    grep -E "^$IMAGE_NAME:[0-9]{8}-[0-9]{4}$" | sort -r | tail -n +2)
+    { grep -E "^$IMAGE_NAME:[0-9]{8}-[0-9]{4}$" || true; } | sort -r | tail -n +2)
   if [ -n "$OLD_DATE_TAGS" ]; then
     echo "$OLD_DATE_TAGS" | xargs -r docker rmi -f 2>/dev/null || true
     print_status "✅ Removed old date-tagged images"
