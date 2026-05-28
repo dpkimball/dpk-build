@@ -11,11 +11,12 @@
 # =============================================================================
 
 # =============================================================================
-# Global Project Paths
+# Global Project Paths (canonical: KeepsakeSSD — see keepsake-paths.sh)
 # =============================================================================
-export KEEPSAKE_PROJECT_ROOT="${KEEPSAKE_PROJECT_ROOT:-$HOME/PycharmProjects}"
-export KEEPSAKE_SCRIPTS_ROOT="${KEEPSAKE_SCRIPTS_ROOT:-$KEEPSAKE_PROJECT_ROOT/keepsake-scripts}"
-export PYPI_PACKAGE_DIR="${PYPI_PACKAGE_DIR:-$KEEPSAKE_PROJECT_ROOT/keepsake-pypi/keepsake-pypi/packages}"
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=keepsake-paths.sh
+[ -f "$_SCRIPT_DIR/keepsake-paths.sh" ] && source "$_SCRIPT_DIR/keepsake-paths.sh"
+unset _SCRIPT_DIR
 
 # =============================================================================
 # Service Ports (DEV environment - shared across all projects)
