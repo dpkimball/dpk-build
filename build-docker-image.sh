@@ -47,15 +47,13 @@ if [ "$CLEANUP_OLD_IMAGES" = true ]; then
     xargs -r docker rmi -f 2>/dev/null || true
   
   # Clean up registry images: remove all except latest (including <none> tags)
-  if [ "${PUSH_TO_REGISTRY:-false}" = "true" ]; then
-    docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.Repository}}:{{.Tag}}\t{{.ID}}" 2>/dev/null | \
-      grep -v "REPOSITORY" | grep -v "^$REGISTRY_URL/$IMAGE_NAME:latest" | \
-      awk '{print $1}' | xargs -r docker rmi -f 2>/dev/null || true
-    
-    docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.ID}}\t{{.Tag}}" 2>/dev/null | \
-      grep -E "\t<none>" | awk '{print $1}' | \
-      xargs -r docker rmi -f 2>/dev/null || true
-  fi
+  docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.Repository}}:{{.Tag}}\t{{.ID}}" 2>/dev/null | \
+    grep -v "REPOSITORY" | grep -v "^$REGISTRY_URL/$IMAGE_NAME:latest" | \
+    awk '{print $1}' | xargs -r docker rmi -f 2>/dev/null || true
+
+  docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.ID}}\t{{.Tag}}" 2>/dev/null | \
+    grep -E "\t<none>" | awk '{print $1}' | \
+    xargs -r docker rmi -f 2>/dev/null || true
 fi
 
 print_status "🐳 Building Docker image..."
@@ -112,59 +110,50 @@ eval $BUILD_CMD
 
 print_status "✅ Build complete. Tagged as $DATE_TAG"
 
-# Push to local registry if enabled
-if [ "${PUSH_TO_REGISTRY:-false}" = "true" ]; then
-  # Source env.sh to get registry URL if available
-  if [ -f "${KEEPSAKE_SCRIPTS_ROOT:-}/env.sh" ]; then
-    source "${KEEPSAKE_SCRIPTS_ROOT}/env.sh"
-  fi
-  
-  REGISTRY_URL="${DOCKER_REGISTRY_URL:-localhost:30500}"
-  print_status "📤 Pushing to local registry at $REGISTRY_URL..."
-  
-  # Tag the date-tagged image as 'latest' for registry push
-  docker tag "$IMAGE_NAME:$DATE_TAG" "$IMAGE_NAME:latest" || {
-    print_error "Failed to tag $IMAGE_NAME:$DATE_TAG as latest"
-    exit 1
-  }
-  
-  # Push 'latest' to registry
-  REGISTRY_TAG="$REGISTRY_URL/$IMAGE_NAME:latest"
-  print_status "🏷️  Tagging as $REGISTRY_TAG..."
-  docker tag "$IMAGE_NAME:latest" "$REGISTRY_TAG" || {
-    print_error "Failed to tag $IMAGE_NAME:latest"
-    exit 1
-  }
-  
-  print_status "📤 Pushing $REGISTRY_TAG..."
-  docker push "$REGISTRY_TAG" || {
-    print_error "Failed to push $REGISTRY_TAG. Is registry running at $REGISTRY_URL?"
-    exit 1
-  }
-  print_status "✅ Pushed $REGISTRY_TAG"
-  
-  # Post-push cleanup: remove intermediate tags and old images
-  print_status "🧹 Post-push cleanup..."
-  
-  # Remove local 'latest' tag after push (keep only date-tagged locally)
-  docker rmi "$IMAGE_NAME:latest" 2>/dev/null || true
-  
-  # Clean up old registry-tagged images (keep only latest)
-  docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.Repository}}:{{.Tag}}\t{{.ID}}" 2>/dev/null | \
-    grep -v "REPOSITORY" | grep -v "^$REGISTRY_URL/$IMAGE_NAME:latest" | \
-    awk '{print $1}' | xargs -r docker rmi -f 2>/dev/null || true
-  
-  # Remove ALL orphaned <none> tagged images for this repository
-  docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.ID}}\t{{.Tag}}" 2>/dev/null | \
-    grep -E "\t<none>" | awk '{print $1}' | \
-    xargs -r docker rmi -f 2>/dev/null || true
-  
-  print_status "✅ Registry images cleaned up"
-  print_status "✅ All images pushed to registry"
-  print_status "📝 Use in Helm charts:"
-  print_status "  repository: ${DOCKER_REGISTRY_CLUSTER_URL:-docker-registry-service.dev.svc.cluster.local:5000}/$IMAGE_NAME"
-  print_status "  tag: latest"
+# Push to local registry (required for Kubernetes pulls)
+if [ -f "${KEEPSAKE_SCRIPTS_ROOT:-}/env.sh" ]; then
+  source "${KEEPSAKE_SCRIPTS_ROOT}/env.sh"
 fi
+
+REGISTRY_URL="${DOCKER_REGISTRY_URL:-localhost:30500}"
+print_status "📤 Pushing to local registry at $REGISTRY_URL..."
+
+docker tag "$IMAGE_NAME:$DATE_TAG" "$IMAGE_NAME:latest" || {
+  print_error "Failed to tag $IMAGE_NAME:$DATE_TAG as latest"
+  exit 1
+}
+
+REGISTRY_TAG="$REGISTRY_URL/$IMAGE_NAME:latest"
+print_status "🏷️  Tagging as $REGISTRY_TAG..."
+docker tag "$IMAGE_NAME:latest" "$REGISTRY_TAG" || {
+  print_error "Failed to tag $IMAGE_NAME:latest"
+  exit 1
+}
+
+print_status "📤 Pushing $REGISTRY_TAG..."
+docker push "$REGISTRY_TAG" || {
+  print_error "Failed to push $REGISTRY_TAG. Is registry running at $REGISTRY_URL?"
+  exit 1
+}
+print_status "✅ Pushed $REGISTRY_TAG"
+
+print_status "🧹 Post-push cleanup..."
+
+docker rmi "$IMAGE_NAME:latest" 2>/dev/null || true
+
+docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.Repository}}:{{.Tag}}\t{{.ID}}" 2>/dev/null | \
+  grep -v "REPOSITORY" | grep -v "^$REGISTRY_URL/$IMAGE_NAME:latest" | \
+  awk '{print $1}' | xargs -r docker rmi -f 2>/dev/null || true
+
+docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.ID}}\t{{.Tag}}" 2>/dev/null | \
+  grep -E "\t<none>" | awk '{print $1}' | \
+  xargs -r docker rmi -f 2>/dev/null || true
+
+print_status "✅ Registry images cleaned up"
+print_status "✅ All images pushed to registry"
+print_status "📝 Use in Helm charts:"
+print_status "  repository: ${DOCKER_REGISTRY_CLUSTER_URL:-docker-registry-service.dev.svc.cluster.local:5000}/$IMAGE_NAME"
+print_status "  tag: latest"
 
 # Final cleanup: ensure we only keep what we need
 if [ "$CLEANUP_OLD_IMAGES" = true ]; then
@@ -182,13 +171,10 @@ if [ "$CLEANUP_OLD_IMAGES" = true ]; then
     grep -E "\t<none>" | awk '{print $1}' | \
     xargs -r docker rmi -f 2>/dev/null || true
   
-  if [ "${PUSH_TO_REGISTRY:-false}" = "true" ]; then
-    REGISTRY_URL="${DOCKER_REGISTRY_URL:-localhost:30500}"
-    # Final pass on registry images: remove orphaned <none> tags
-    docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.ID}}\t{{.Tag}}" 2>/dev/null | \
-      grep -E "\t<none>" | awk '{print $1}' | \
-      xargs -r docker rmi -f 2>/dev/null || true
-  fi
-  
+  REGISTRY_URL="${DOCKER_REGISTRY_URL:-localhost:30500}"
+  docker images "$REGISTRY_URL/$IMAGE_NAME" --format "{{.ID}}\t{{.Tag}}" 2>/dev/null | \
+    grep -E "\t<none>" | awk '{print $1}' | \
+    xargs -r docker rmi -f 2>/dev/null || true
+
   print_status "✅ Final cleanup complete"
 fi
