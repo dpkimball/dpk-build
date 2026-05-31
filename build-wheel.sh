@@ -3,7 +3,7 @@ set -euo pipefail
 
 # 🌐 Load shared utils and env
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/utils.sh"
+source "$SCRIPT_DIR/common.sh"
 source "$KEEPSAKE_SCRIPTS_ROOT/env.sh"
 
 # 🔧 Store PyPI settings for local development if set (don't export yet)
@@ -64,8 +64,15 @@ fi
 log_info "🔢 Latest version on PyPI: $LATEST_VERSION"
 
 if [[ -z "$LATEST_VERSION" ]]; then
-  log_info "⚠️  No versions found on PyPI. Defaulting to 0.0.0"
-  LATEST_VERSION="0.0.0"
+  if [[ "${FIRST_BUILD:-}" == "1" ]]; then
+    log_info "⚠️  No versions found on PyPI. FIRST_BUILD=1 set — starting at 0.0.1"
+    LATEST_VERSION="0.0.0"
+  else
+    log_error "❌ No versions found on PyPI for '$PACKAGE_NAME'."
+    log_error "   If this is a first build, set FIRST_BUILD=1 and re-run."
+    log_error "   If PyPI is unreachable, check PYPI_HOST ($PYPI_HOST) and PYPI_PORT ($PYPI_PORT)."
+    exit 1
+  fi
 fi
 
 MAJOR=$(echo "$LATEST_VERSION" | cut -d. -f1)

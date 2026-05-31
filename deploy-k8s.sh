@@ -14,6 +14,7 @@ if echo "$CURRENT_CONTEXT" | grep -q "kind"; then
   print_status "🐳 Loading image into Kind cluster..."
   kind load docker-image "$IMAGE_NAME:latest" --name "${KIND_CLUSTER:-keepsake-dev}"
 elif echo "$CLUSTER_NAME" | grep -q "rancher-desktop" || echo "$CURRENT_CONTEXT" | grep -q "rancher-desktop"; then
+  # Matches both context=rancher-desktop and context=keepsake-dev (cluster name stays 'rancher-desktop')
   print_status "🐳 Using Rancher Desktop (image already available)"
 elif echo "$CLUSTER_NAME" | grep -q "docker-desktop" || echo "$CURRENT_CONTEXT" | grep -q "docker-desktop"; then
   print_status "🐳 Using Docker Desktop (image already available)"
