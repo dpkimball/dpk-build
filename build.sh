@@ -4,7 +4,7 @@ set -euo pipefail
 # Load shared env defaults (assumes sourced by outer wrapper like bin/build.sh)
 # This should already be done before calling this script
 # source "$KEEPSAKE_SCRIPTS_ROOT/env.sh"
-source "$KEEPSAKE_SCRIPTS_ROOT/utils.sh"
+source "$KEEPSAKE_SCRIPTS_ROOT/common.sh"
 
 log_info "🐍 Ensuring virtualenv exists..."
 

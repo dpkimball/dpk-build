@@ -11,11 +11,14 @@ GET_VERSION_SCRIPT="$SCRIPT_DIR/get_latest_pypi_version.sh"
 
 LATEST_VERSION="$("$GET_VERSION_SCRIPT" "$PACKAGE_NAME")"
 
+if [[ -z "$LATEST_VERSION" ]]; then
+  echo "⚠️  No version found for '$PACKAGE_NAME' on PyPI — skipping update"
+  exit 0
+fi
+
 echo "✅ Found latest version: $LATEST_VERSION"
 
 # 🛠️ Update pyproject.toml (supports both list-style and table-style)
-ESCAPED_NAME=$(echo "$PACKAGE_NAME" | sed 's/-/_/g')
-
 # macOS vs Linux `sed` compatibility
 ESCAPED_NAME=$(echo "$PACKAGE_NAME" | sed 's/[]\/$*.^[]/\\&/g')
 
