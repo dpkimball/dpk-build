@@ -3,7 +3,7 @@
 # Docker Cleanup Script
 # Usage: ./docker_cleanup.sh [OPTIONS]
 
-set -e
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -107,7 +107,7 @@ find_unused_images() {
     echo -e "\n${BLUE}=== Unused Images ===${NC}"
 
     # Get all image IDs that are used by containers
-    local used_images=$(docker ps -a --format "{{.Image}}" | sort | uniq)
+    local used_images; used_images=$(docker ps -a --format "{{.Image}}" | sort | uniq)
 
     # Get all images
     docker images --format "{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedAt}} {{.Size}}" | while read repo_tag id created size; do
@@ -130,16 +130,16 @@ find_unused_images() {
 
 find_old_images() {
     echo -e "\n${BLUE}=== Images Older Than $KEEP_RECENT_DAYS Days ===${NC}"
-    local cutoff_date=$(date -d "$KEEP_RECENT_DAYS days ago" +%s)
+    local cutoff_date; cutoff_date=$(date -d "$KEEP_RECENT_DAYS days ago" +%s)
 
     docker images --format "{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedAt}}" | while read repo_tag id created_str; do
         # Convert created date to timestamp (this is approximate)
         if command -v gdate >/dev/null 2>&1; then
             # macOS
-            local created_ts=$(gdate -d "$created_str" +%s 2>/dev/null || echo "0")
+            local created_ts; created_ts=$(gdate -d "$created_str" +%s 2>/dev/null || echo "0")
         else
             # Linux
-            local created_ts=$(date -d "$created_str" +%s 2>/dev/null || echo "0")
+            local created_ts; created_ts=$(date -d "$created_str" +%s 2>/dev/null || echo "0")
         fi
 
         if [[ $created_ts -lt $cutoff_date ]] && [[ $created_ts -gt 0 ]]; then
@@ -151,7 +151,7 @@ find_old_images() {
 cleanup_containers() {
     echo -e "\n${BLUE}=== Cleaning Up Containers ===${NC}"
 
-    local stopped_containers=$(docker ps -aq --filter "status=exited")
+    local stopped_containers; stopped_containers=$(docker ps -aq --filter "status=exited")
 
     if [[ -z "$stopped_containers" ]]; then
         echo "No stopped containers to remove."

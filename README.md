@@ -70,6 +70,10 @@ These must be set (or available via `env.sh`) before running any script:
 | `PYPI_USERNAME` | `build-wheel.sh`, `get_latest_pypi_version.sh` | PyPI auth username |
 | `PYPI_PASSWORD` | `build-wheel.sh`, `get_latest_pypi_version.sh` | PyPI auth password |
 | `IMAGE_NAME` | `build-docker-image.sh`, `deploy-k8s.sh` | Docker image name |
+| `HELM_RELEASE` | `deploy-k8s.sh` | Single Helm release (takes priority over inherited `HELM_RELEASES`) |
+| `HELM_RELEASES` | `deploy-k8s.sh` | Comma-separated multi-release deploy (keepsake backend: prestart + backend) |
+| `HELM_CHART_PATH` | `deploy-k8s.sh` | Chart directory when release name ≠ chart folder |
+| `K8S_NAMESPACE` | `deploy-k8s.sh` | Target namespace (default from shared `env.sh`: `dev`) |
 
 Optional overrides: `PYPI_HOST_OVERRIDE`, `PYPI_PORT_OVERRIDE` (take precedence over `PYPI_HOST`/`PYPI_PORT` when set).
 
@@ -83,8 +87,19 @@ Optional overrides: `PYPI_HOST_OVERRIDE`, `PYPI_PORT_OVERRIDE` (take precedence 
 # In a project's env.sh:
 source "$KEEPSAKE_SCRIPTS_ROOT/env.sh"
 export IMAGE_NAME="my-service"
-export HELM_RELEASE="my-service"
+export HELM_RELEASE="my-service"   # single chart — wins over inherited HELM_RELEASES
+
+# Multi-release (keepsake backend only — do not set HELM_RELEASE):
+export HELM_RELEASES="keepsake-prestart,keepsake-backend"
 ```
+
+**Deploy priority** (`deploy-k8s.sh`):
+
+1. `HELM_RELEASE` set → upgrade one chart (resume → `dagster-resume`, even if shell still has `HELM_RELEASES` from another repo)
+2. else `HELM_RELEASES` set → upgrade each release in the list
+3. else → single release named `IMAGE_NAME`
+
+Single-release projects should set `HELM_RELEASE` (and may `unset HELM_RELEASES` in project `env.sh` for clarity).
 
 `env.sh` sources `keepsake-paths.sh` for canonical SSD-relative project roots.
 
