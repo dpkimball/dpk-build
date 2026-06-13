@@ -7,7 +7,7 @@ PACKAGE_NAME="$1"
 PYPROJECT_FILE="$2"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GET_VERSION_SCRIPT="$SCRIPT_DIR/get_latest_pypi_version.sh"
+GET_VERSION_SCRIPT="$SCRIPT_DIR/../shared/get_latest_pypi_version.sh"
 
 LATEST_VERSION="$("$GET_VERSION_SCRIPT" "$PACKAGE_NAME")"
 
