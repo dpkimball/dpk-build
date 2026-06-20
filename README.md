@@ -146,7 +146,6 @@ All shared shell helpers live in `common.sh`:
 | `keepsake-services` | build + wheel scripts |
 | `dpk` | build + deploy scripts |
 | `dpk-client` | build + wheel scripts |
-| `dpk-dashboard` | build + deploy scripts |
 | `keepsake` | build + deploy scripts |
 | `text_ai` | build + wheel scripts |
 | `text-decipher` | build + deploy scripts |
