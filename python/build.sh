@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../env.sh"
-source "$SCRIPT_DIR/../common.sh"
+_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$_SCRIPTS_DIR/../env.sh"
+source "$_SCRIPTS_DIR/../common.sh"
 [ -f "$PWD/env.sh" ] && source "$PWD/env.sh"
 
 log_info "🐍 Ensuring virtualenv exists..."
@@ -28,25 +28,25 @@ fi
 
 if [[ "${SKIP_LINT:-false}" != "true" ]]; then
   log_info "🔄 Running lint..."
-  "$SCRIPT_DIR/../lint.sh"
+  "$_SCRIPTS_DIR/../lint.sh"
 fi
 
 if [[ "${SKIP_TESTS:-false}" != "true" ]]; then
   log_info "🔄 Running tests..."
-  "$SCRIPT_DIR/../test.sh"
+  "$_SCRIPTS_DIR/../test.sh"
 fi
 
 if [[ "${SKIP_WHEEL:-false}" != "true" ]]; then
   log_info "🔄 Building wheel..."
-  "$SCRIPT_DIR/build-wheel.sh"
+  "$_SCRIPTS_DIR/build-wheel.sh"
 fi
 
 if [[ "${SKIP_DOCKER_IMAGE:-false}" != "true" ]]; then
   log_info "🔄 Building Docker image..."
-  "$SCRIPT_DIR/build-docker.sh"
+  "$_SCRIPTS_DIR/build-docker.sh"
 fi
 
 if [[ "${SKIP_K8S_DEPLOY:-false}" != "true" && "${K8S_DEPLOY:-false}" = "true" ]]; then
   log_info "🔄 Deploying to Kubernetes..."
-  "$SCRIPT_DIR/deploy-k8s.sh"
+  "$_SCRIPTS_DIR/deploy-k8s.sh"
 fi

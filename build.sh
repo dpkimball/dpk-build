@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/env.sh"
-source "$SCRIPT_DIR/common.sh"
+_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$_SCRIPTS_DIR/env.sh"
+source "$_SCRIPTS_DIR/common.sh"
 [ -f "$PWD/env.sh" ] && source "$PWD/env.sh"
 
 BUILD_LANG="${BUILD_LANG:-}"
@@ -17,4 +17,4 @@ if [ -z "$BUILD_LANG" ]; then
 fi
 
 log_step "Language: $BUILD_LANG"
-exec "$SCRIPT_DIR/$BUILD_LANG/build.sh" "$@"
+exec "$_SCRIPTS_DIR/$BUILD_LANG/build.sh" "$@"

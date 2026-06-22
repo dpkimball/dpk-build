@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/env.sh"
-source "$SCRIPT_DIR/common.sh"
+_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$_SCRIPTS_DIR/env.sh"
+source "$_SCRIPTS_DIR/common.sh"
 [ -f "$PWD/env.sh" ] && source "$PWD/env.sh"
 
 PYPROJECT="${PYPROJECT:-$PWD/pyproject.toml}"
@@ -21,7 +21,7 @@ log_step "Updating internal package versions in $PYPROJECT..."
 
 for pkg in $INTERNAL_PKGS; do
   log_info "  → $pkg"
-  "$SCRIPT_DIR/python/update_pyproject_version.sh" "$pkg" "$PYPROJECT"
+  "$_SCRIPTS_DIR/python/update_pyproject_version.sh" "$pkg" "$PYPROJECT"
 done
 
 log_success "Version update complete"

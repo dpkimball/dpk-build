@@ -63,7 +63,7 @@ export MONGO_URI="${MONGO_URI:-${KEEPSAKE_MONGO_URI}}"
 # PyPI Configuration (shared across all projects)
 # =============================================================================
 export PYPI_HOST="${PYPI_HOST:-localhost}"
-export PYPI_PORT="${PYPI_PORT:-${KEEPSAKE_PYPI_PORT}}"
+export PYPI_PORT="${KEEPSAKE_PYPI_PORT}"
 export PYPI_USERNAME="${PYPI_USERNAME:-admin}"
 export PYPI_PASSWORD="${PYPI_PASSWORD:-your-secret-password}"
 export PYPI_URL="http://${PYPI_HOST}:${PYPI_PORT}"
@@ -76,8 +76,8 @@ export UV_INDEX_URL_TEST="http://${PYPI_USERNAME}:${PYPI_PASSWORD}@${PYPI_HOST}:
 export UV_INDEX_URL_BUILD="http://${PYPI_USERNAME}:${PYPI_PASSWORD}@host.docker.internal:${KEEPSAKE_PYPI_PORT}/simple"
 export UV_EXTRA_INDEX_URL="${UV_EXTRA_INDEX_URL:-https://pypi.org/simple}"
 
-# Default UV_INDEX_URL to the test variant for local commands
-export UV_INDEX_URL="${UV_INDEX_URL:-$UV_INDEX_URL_TEST}"
+# Host commands (lint, test, uv sync) always use localhost PyPI — never a stale shell UV_INDEX_URL.
+export UV_INDEX_URL="$UV_INDEX_URL_TEST"
 
 # =============================================================================
 # Build & Test Flags
