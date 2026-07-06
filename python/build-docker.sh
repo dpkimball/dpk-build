@@ -9,6 +9,7 @@ source "$SCRIPT_DIR/../common.sh"
 
 IMAGE_NAME="${IMAGE_NAME:-my_image}"
 DOCKERFILE_DIR="${DOCKERFILE_DIR:-.}"
+DOCKERFILE="${DOCKERFILE:-Dockerfile}"
 CLEAN="${CLEAN:-false}"
 # Always cleanup old images - this is not optional
 CLEANUP_OLD_IMAGES="${CLEANUP_OLD_IMAGES:-true}"
@@ -71,6 +72,9 @@ print_status "🔍 Debug: Using for build: ${_UV_URL_FOR_BUILD:-not set}"
 BUILD_ARGS=(docker build --network host)
 if [ "${DOCKER_BUILD_PULL:-}" = "false" ]; then
     BUILD_ARGS+=(--pull=false)
+fi
+if [ "$DOCKERFILE" != "Dockerfile" ]; then
+    BUILD_ARGS+=(-f "$DOCKERFILE")
 fi
 
 if [ -n "${BASE_IMAGE:-}" ]; then
