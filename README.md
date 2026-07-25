@@ -1,6 +1,10 @@
-# keepsake-scripts
+# DPK Build (`dpk-build`)
 
-Shared build pipeline for every service in the Keepsake ecosystem. Every `make b` call across all repos ultimately sources and executes these scripts.
+GitHub repository: [`dpkimball/dpk-build`](https://github.com/dpkimball/dpk-build) (renamed from `keepsake-scripts`; old URLs redirect).
+
+Shared `make b` pipeline for DPK platform and Keepsake application repos. Every `make b` call across consuming repos ultimately sources and executes these scripts.
+
+**Stability:** Local checkout folder may still be named `keepsake-scripts`. Env vars such as `KEEPSAKE_SCRIPTS_ROOT` stay stable until a dedicated env migration.
 
 ---
 
