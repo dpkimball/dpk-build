@@ -1,6 +1,6 @@
 # Rust Support in Keepsake Scripts
 
-This document describes the Rust support added to the keepsake-scripts project for building and deploying Rust applications, specifically designed for the memory-graph-service.
+This document describes the Rust support added to the dpk-build project for building and deploying Rust applications, specifically designed for the memory-graph-service.
 
 ## Overview
 
@@ -8,7 +8,7 @@ The Rust support provides standardized scripts for:
 - Building Rust projects with Docker support
 - Building multi-architecture Docker images
 - Launching containers in development environments
-- Integration with existing keepsake-scripts patterns
+- Integration with existing dpk-build patterns
 
 ## Scripts
 
@@ -84,7 +84,7 @@ The memory-graph-service Makefile has been updated to integrate with these scrip
 
 ### New Makefile Targets
 
-- `make build-docker` - Build Docker image using keepsake-scripts
+- `make build-docker` - Build Docker image using dpk-build
 - `make launch-dev` - Launch container in dev environment
 - `make dev-up` - Build and launch dev environment (recommended)
 - `make dev-down` - Stop dev environment
@@ -147,7 +147,7 @@ The local build scripts attempt multi-architecture builds but fall back to singl
 
 ### Scripts Not Found
 If you get "Keepsake scripts not found" errors:
-1. Ensure keepsake-scripts is in the expected location relative to your project
+1. Ensure dpk-build is in the expected location relative to your project
 2. Check the `KEEPSAKE_SCRIPTS_ROOT` environment variable
 3. Verify the scripts are executable: `chmod +x rust_*.sh`
 

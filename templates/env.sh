@@ -4,9 +4,9 @@
 # Delete the block (service OR library) that doesn't apply.
 # =============================================================================
 
-# Load keepsake-scripts global defaults (ports, URLs, PyPI config, etc.)
+# Load dpk-build global defaults (ports, URLs, PyPI config, etc.)
 # shellcheck source=/dev/null
-source "${KEEPSAKE_SCRIPTS_ROOT:-${KEEPSAKE_SSD:-/Volumes/KeepsakeSSD}/keepsake-workspace/keepsake-scripts}/env.sh"
+source "${KEEPSAKE_SCRIPTS_ROOT:-${KEEPSAKE_SSD:-/Volumes/KeepsakeSSD}/keepsake-workspace/dpk-build}/env.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

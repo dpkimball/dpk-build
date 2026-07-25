@@ -61,7 +61,7 @@ Snapshot of how the repository maps to the three-tier architecture as of Novembe
 | `src/utils/` | Common utilities (e.g., error helpers, chrono conversions). |
 | `tests/` | Integration suites. Files prefixed with `grpc_` hit live servers; `synopsis_test.rs` orchestrates end-to-end synopsis generation. |
 | `memory-graph-client/` | Python client, proto definitions, build scripts (`bin/generate_proto.sh`), and tests. |
-| `Makefile` | Single entry point for lint/test/build/deploy; wraps keepsake-scripts for Docker builds. |
+| `Makefile` | Single entry point for lint/test/build/deploy; wraps dpk-build for Docker builds. |
 | `docs/` | This documentation set. |
 
 ---

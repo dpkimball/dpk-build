@@ -2,8 +2,8 @@
 # Project Makefile — copy this to your project root and customise two lines.
 # =============================================================================
 
-# Path to keepsake-scripts (adjust depth: ../  ../../  ../../../  as needed)
-KEEPSAKE_SCRIPTS_ROOT ?= ../keepsake-scripts
+# Path to dpk-build (adjust depth: ../  ../../  ../../../  as needed)
+KEEPSAKE_SCRIPTS_ROOT ?= ../dpk-build
 
 # Space-separated internal packages to auto-update before each build.
 # Leave empty if this project has no internal dependencies.
