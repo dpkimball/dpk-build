@@ -175,7 +175,7 @@ wait_for_resource_ready() {
 # Prefer explicit HELM_RELEASE (single chart) over inherited HELM_RELEASES from another
 # project's shell — e.g. resume-pipeline must deploy dagster-resume, not keepsake-prestart.
 if [[ -n "${HELM_RELEASE:-}" ]]; then
-  HELM_CHART_PATH="${HELM_CHART_PATH:-$KEEPSAKE_PROJECT_ROOT/keepsake-infra/charts/$HELM_RELEASE}"
+  HELM_CHART_PATH="${HELM_CHART_PATH:-$KEEPSAKE_PROJECT_ROOT/dpk-infra/charts/$HELM_RELEASE}"
 
   print_status "📦 Updating Helm release: $HELM_RELEASE in namespace: $K8S_NAMESPACE"
   print_status "📁 Using chart path: $HELM_CHART_PATH"
@@ -210,7 +210,7 @@ elif [[ -n "${HELM_RELEASES:-}" ]]; then
   IFS=',' read -ra RELEASES <<< "$HELM_RELEASES"
   for release in "${RELEASES[@]}"; do
     release=$(echo "$release" | xargs) # trim whitespace
-    HELM_CHART_PATH="$KEEPSAKE_PROJECT_ROOT/keepsake-infra/charts/$release"
+    HELM_CHART_PATH="$KEEPSAKE_PROJECT_ROOT/dpk-infra/charts/$release"
 
     print_status "📦 Updating Helm release: $release in namespace: $K8S_NAMESPACE"
     print_status "📁 Using chart path: $HELM_CHART_PATH"
@@ -263,7 +263,7 @@ elif [[ -n "${HELM_RELEASES:-}" ]]; then
 else
   # Single release — default chart/release name follows IMAGE_NAME
   HELM_RELEASE="${HELM_RELEASE:-$IMAGE_NAME}"
-  HELM_CHART_PATH="${HELM_CHART_PATH:-$KEEPSAKE_PROJECT_ROOT/keepsake-infra/charts/$IMAGE_NAME}"
+  HELM_CHART_PATH="${HELM_CHART_PATH:-$KEEPSAKE_PROJECT_ROOT/dpk-infra/charts/$IMAGE_NAME}"
 
   print_status "📦 Updating Helm release: $HELM_RELEASE in namespace: $K8S_NAMESPACE"
   print_status "📁 Using chart path: $HELM_CHART_PATH"

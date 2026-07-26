@@ -31,7 +31,7 @@ export SKIP_K8S_DEPLOY="false"
 export K8S_DEPLOY="true"
 export K8S_NAMESPACE="dev"                 # or "dagster" for Dagster services
 export HELM_RELEASE="my-service"
-export HELM_CHART_PATH="${KEEPSAKE_PROJECT_ROOT}/keepsake-infra/charts/my-service"
+export HELM_CHART_PATH="${KEEPSAKE_PROJECT_ROOT}/dpk-infra/charts/my-service"
 
 # =============================================================================
 # LIBRARY (publishes a wheel to local PyPI) — delete if service

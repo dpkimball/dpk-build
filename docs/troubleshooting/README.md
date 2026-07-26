@@ -151,7 +151,7 @@ Living documentation for every part of the service. Each file describes the **cu
 | [`02-cursor-rules.md`](development/02-cursor-rules.md) | Full Cursor/Keepsake ruleset for AI collaborators. |
 | [`03-testing-guide.md`](development/03-testing-guide.md) | Mongo/Neo4j/Weaviate setup plus instructions for each test suite. |
 | [`04-quick-reference.md`](development/04-quick-reference.md) | Frequently used commands, troubleshooting, and log collection. |
-| [`05-local-services.md`](development/05-local-services.md) | How to bootstrap dependencies via `keepsake-infra` and verify health locally. |
+| [`05-local-services.md`](development/05-local-services.md) | How to bootstrap dependencies via `dpk-infra` and verify health locally. |
 
 ---
 
