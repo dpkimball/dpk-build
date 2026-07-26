@@ -1,0 +1,108 @@
+# Consumer workflow: run security-audit on pull requests and default-branch pushes.
+# Generated from security-audit/workflows/templates/security-audit-pr.yml — prefer sync-pr-workflows.py.
+#
+# Dispatches audit-on-request.yml in dpkimball/security-audit so the isolated
+# memoryai runner executes the scan. workflow_call would queue on this repo's
+# self-hosted runners, which lack the security-audit label.
+
+name: Security Audit
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+concurrency:
+  group: security-audit-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  security-audit:
+    runs-on: self-hosted
+    timeout-minutes: 90
+
+    steps:
+      - name: Resolve target ref
+        id: target
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "ref=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger remote audit
+        id: trigger
+        env:
+          GH_TOKEN: ${{ secrets.SECURITY_AUDIT_READ_TOKEN || secrets.PAT_WORKFLOWGITACTION }}
+        run: |
+          set -euo pipefail
+          export PATH="${HOME}/.local/bin:${PATH}"
+          CORRELATION="${{ github.run_id }}"
+          AUDIT_MODE="${{ github.event_name == 'pull_request' && 'pull-request' || (github.event_name == 'push' && 'default-branch' || 'manual') }}"
+
+          gh workflow run audit-on-request.yml \
+            -R dpkimball/security-audit \
+            -f "repository-name=dpk-build" \
+            -f "github-repository=dpkimball/dpk-build" \
+            -f "target-ref=${{ steps.target.outputs.ref }}" \
+            -f "repository-classification=medium" \
+            -f "audit-mode=${AUDIT_MODE}" \
+            -f "full-history=false" \
+            -f "create-issues=false" \
+            -f "caller-run-id=${CORRELATION}"
+
+          echo "correlation=${CORRELATION}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for audit completion
+        env:
+          GH_TOKEN: ${{ secrets.SECURITY_AUDIT_READ_TOKEN || secrets.PAT_WORKFLOWGITACTION }}
+        run: |
+          set -euo pipefail
+          export PATH="${HOME}/.local/bin:${PATH}"
+          CORRELATION="${{ steps.trigger.outputs.correlation }}"
+          MARKER="[caller:${CORRELATION}]"
+          RUN_ID=""
+
+          for _ in $(seq 1 30); do
+            RUN_ID=$(gh run list -R dpkimball/security-audit \
+              --workflow audit-on-request.yml \
+              --limit 25 \
+              --json databaseId,displayTitle \
+              --jq ".[] | select(.displayTitle | contains(\"${MARKER}\")) | .databaseId" | head -1)
+            if [[ -n "${RUN_ID}" ]]; then
+              break
+            fi
+            sleep 5
+          done
+
+          if [[ -z "${RUN_ID}" ]]; then
+            echo "::error::Timed out waiting for security audit run to appear."
+            exit 1
+          fi
+
+          echo "Watching remote audit run ${RUN_ID}"
+          gh run watch "${RUN_ID}" -R dpkimball/security-audit --exit-status
+
+      - name: Link remote audit run
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.SECURITY_AUDIT_READ_TOKEN || secrets.PAT_WORKFLOWGITACTION }}
+        run: |
+          CORRELATION="${{ steps.trigger.outputs.correlation }}"
+          MARKER="[caller:${CORRELATION}]"
+          RUN_ID=$(gh run list -R dpkimball/security-audit \
+            --workflow audit-on-request.yml \
+            --limit 25 \
+            --json databaseId,displayTitle \
+            --jq ".[] | select(.displayTitle | contains(\"${MARKER}\")) | .databaseId" | head -1) || true
+          if [[ -n "${RUN_ID}" ]]; then
+            URL=$(gh run view "${RUN_ID}" -R dpkimball/security-audit --json url -q .url)
+            echo "### Remote audit run" >> "$GITHUB_STEP_SUMMARY"
+            echo "[View on security-audit](${URL})" >> "$GITHUB_STEP_SUMMARY"
+          fi
