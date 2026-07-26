@@ -1,5 +1,7 @@
 # DPK Build (`dpk-build`)
 
+[![ShellCheck](https://github.com/dpkimball/dpk-build/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/dpkimball/dpk-build/actions/workflows/shellcheck.yml)
+
 GitHub repository: [`dpkimball/dpk-build`](https://github.com/dpkimball/dpk-build) (renamed from `keepsake-scripts`; old URLs redirect).
 
 Shared `make b` pipeline for DPK platform and Keepsake application repos. Every `make b` call across consuming repos ultimately sources and executes these scripts.
