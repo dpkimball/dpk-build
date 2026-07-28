@@ -4,12 +4,21 @@
 # Dispatches audit-on-request.yml in dpkimball/security-audit so the isolated
 # memoryai runner executes the scan. workflow_call would queue on this repo's
 # self-hosted runners, which lack the security-audit label.
+#
+# Docs-only PRs (markdown/rst/txt) are excluded via paths-ignore so they do not
+# queue a runner. An in-job gate is a backup if the workflow still runs. Keep
+# runs-on: self-hosted — GitHub-hosted ubuntu-latest may be blocked by org billing.
 
 name: Security Audit
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.mdx"
+      - "**/*.rst"
+      - "**/*.txt"
   push:
     branches: [master, main]
   workflow_dispatch:
@@ -20,6 +29,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   security-audit:
@@ -27,7 +37,55 @@ jobs:
     timeout-minutes: 90
 
     steps:
+      - name: Decide whether to audit
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          export PATH="${HOME}/.local/bin:${PATH}"
+
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            echo "run_audit=true" >> "$GITHUB_OUTPUT"
+            echo "reason=non-pull_request-event" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          FILES="$(gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].filename')"
+
+          if [[ -z "${FILES}" ]]; then
+            echo "run_audit=true" >> "$GITHUB_OUTPUT"
+            echo "reason=empty-file-list" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          NON_DOC=""
+          while IFS= read -r f; do
+            [[ -z "${f}" ]] && continue
+            case "${f}" in
+              *.md|*.mdx|*.rst|*.txt) ;;
+              *)
+                NON_DOC="${NON_DOC}${f}"$'\n'
+                ;;
+            esac
+          done <<< "${FILES}"
+
+          if [[ -z "${NON_DOC}" ]]; then
+            echo "run_audit=false" >> "$GITHUB_OUTPUT"
+            echo "reason=docs-only" >> "$GITHUB_OUTPUT"
+            {
+              echo "Docs-only PR (md/mdx/rst/txt); skipping full security audit."
+              echo "${FILES}"
+            }
+          else
+            echo "run_audit=true" >> "$GITHUB_OUTPUT"
+            echo "reason=code-or-config-changes" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Resolve target ref
+        if: steps.gate.outputs.run_audit == 'true'
         id: target
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
@@ -37,6 +95,7 @@ jobs:
           fi
 
       - name: Trigger remote audit
+        if: steps.gate.outputs.run_audit == 'true'
         id: trigger
         env:
           GH_TOKEN: ${{ secrets.SECURITY_AUDIT_READ_TOKEN || secrets.PAT_WORKFLOWGITACTION }}
@@ -51,7 +110,7 @@ jobs:
             -f "repository-name=dpk-build" \
             -f "github-repository=dpkimball/dpk-build" \
             -f "target-ref=${{ steps.target.outputs.ref }}" \
-            -f "repository-classification=medium" \
+            -f "repository-classification=low" \
             -f "audit-mode=${AUDIT_MODE}" \
             -f "full-history=false" \
             -f "create-issues=false" \
@@ -60,6 +119,7 @@ jobs:
           echo "correlation=${CORRELATION}" >> "$GITHUB_OUTPUT"
 
       - name: Wait for audit completion
+        if: steps.gate.outputs.run_audit == 'true'
         env:
           GH_TOKEN: ${{ secrets.SECURITY_AUDIT_READ_TOKEN || secrets.PAT_WORKFLOWGITACTION }}
         run: |
@@ -90,7 +150,7 @@ jobs:
           gh run watch "${RUN_ID}" -R dpkimball/security-audit --exit-status
 
       - name: Link remote audit run
-        if: always()
+        if: always() && steps.gate.outputs.run_audit == 'true'
         env:
           GH_TOKEN: ${{ secrets.SECURITY_AUDIT_READ_TOKEN || secrets.PAT_WORKFLOWGITACTION }}
         run: |
@@ -106,3 +166,12 @@ jobs:
             echo "### Remote audit run" >> "$GITHUB_STEP_SUMMARY"
             echo "[View on security-audit](${URL})" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Record docs-only skip
+        if: steps.gate.outputs.run_audit != 'true'
+        run: |
+          {
+            echo "### Security audit skipped"
+            echo "Reason: docs-only PR (changed files are only \`.md\` / \`.mdx\` / \`.rst\` / \`.txt\`)."
+            echo "Full audit still runs on default-branch push, workflow_dispatch, and weekly schedule."
+          } >> "$GITHUB_STEP_SUMMARY"
