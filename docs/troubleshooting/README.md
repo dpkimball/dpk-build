@@ -167,7 +167,7 @@ Living documentation for every part of the service. Each file describes the **cu
 ### Specifications (`design/specifications/`)
 | File | Description |
 | --- | --- |
-| [`01-brain-architecture.md`](design/specifications/01-brain-architecture.md) | How keepsake-brain orchestrates LangGraph nodes against this service. |
+| [`01-brain-architecture.md`](design/specifications/01-brain-architecture.md) | How dpk-agent orchestrates LangGraph nodes against this service. |
 | [`02-project-charter.md`](design/specifications/02-project-charter.md) | Current mission/objectives for memory-graph-service inside the Keepsake ecosystem. |
 | [`03-data-model.md`](design/specifications/03-data-model.md) | Entity definitions that tie `src/domain/*` to `memory_graph_client/proto/*`. |
 

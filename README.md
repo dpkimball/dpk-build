@@ -148,7 +148,7 @@ All shared shell helpers live in `common.sh`:
 
 | Repo | Uses |
 |------|------|
-| `keepsake-brain` | build + deploy scripts |
+| `dpk-agent` | build + deploy scripts |
 | `keepsake-services` | build + wheel scripts |
 | `dpk` | build + deploy scripts |
 | `dpk-client` | build + wheel scripts |
