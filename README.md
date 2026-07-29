@@ -8,6 +8,8 @@ Shared `make b` pipeline for DPK platform and Keepsake application repos. Every 
 
 **Stability:** Local checkout folder is `dpk-build` (was `keepsake-scripts`). Env vars such as `KEEPSAKE_SCRIPTS_ROOT` stay stable until a dedicated env migration.
 
+**Sibling:** Remote CI (reusable GitHub Actions workflows, base images, deploy families) lives in [`dpk-ci`](https://github.com/dpkimball/dpk-ci) (was `keepsake-images`). Local `make b` does not replace those workflows.
+
 ---
 
 ## The `make b` pipeline
