@@ -26,7 +26,7 @@ fi
 # Check if Docker image exists
 if ! docker image inspect "$IMAGE_NAME:latest" >/dev/null 2>&1; then
   log_error "Docker image $IMAGE_NAME:latest not found. Please build it first with:"
-  log_error "  $KEEPSAKE_SCRIPTS_ROOT/rust_docker_build.sh"
+  log_error "  $BUILD_ROOT/rust_docker_build.sh"
   exit 1
 fi
 

@@ -148,7 +148,7 @@ The local build scripts attempt multi-architecture builds but fall back to singl
 ### Scripts Not Found
 If you get "Keepsake scripts not found" errors:
 1. Ensure dpk-build is in the expected location relative to your project
-2. Check the `KEEPSAKE_SCRIPTS_ROOT` environment variable
+2. Check the `BUILD_ROOT` environment variable
 3. Verify the scripts are executable: `chmod +x rust_*.sh`
 
 ### Docker Build Issues

@@ -4,9 +4,21 @@
 # Delete the block (service OR library) that doesn't apply.
 # =============================================================================
 
-# Load dpk-build global defaults (ports, URLs, PyPI config, etc.)
+# Bootstrap BUILD_ROOT without hardcoding the umbrella folder name.
+# Prefer sibling ../dpk-build (works under any workspace directory name).
+if [ -z "${BUILD_ROOT:-}" ]; then
+  if [ -n "${BASH_SOURCE[0]:-}" ]; then
+    _ENV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  else
+    _ENV_DIR="$(cd "$(dirname "$0")" && pwd)"
+  fi
+  if [ -f "${_ENV_DIR}/../dpk-build/env.sh" ]; then
+    export BUILD_ROOT="$(cd "${_ENV_DIR}/../dpk-build" && pwd)"
+  fi
+  unset _ENV_DIR
+fi
 # shellcheck source=/dev/null
-source "${KEEPSAKE_SCRIPTS_ROOT:-${KEEPSAKE_SSD:-/Volumes/KeepsakeSSD}/keepsake-workspace/dpk-build}/env.sh"
+source "${BUILD_ROOT}/env.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -31,7 +43,7 @@ export SKIP_K8S_DEPLOY="false"
 export K8S_DEPLOY="true"
 export K8S_NAMESPACE="dev"                 # or "dagster" for Dagster services
 export HELM_RELEASE="my-service"
-export HELM_CHART_PATH="${KEEPSAKE_PROJECT_ROOT}/dpk-infra/charts/my-service"
+export HELM_CHART_PATH="${HELM_CHART_PATH:-${WORKSPACE_ROOT}/dpk-infra/charts/my-service}"
 
 # =============================================================================
 # LIBRARY (publishes a wheel to local PyPI) — delete if service

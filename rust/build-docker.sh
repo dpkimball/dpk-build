@@ -98,14 +98,6 @@ docker push "${REMOTE_IMAGE}:${DATE_TAG}"
 
 log_success "✅ Pushed to ${REMOTE_IMAGE} (latest, ${DATE_TAG})"
 
-if [ -n "${COMPOSE_SERVICE:-}" ]; then
-  log_info "🔄 Replacing running container for service: $COMPOSE_SERVICE"
-  docker compose -f "${KEEPSAKE_COMPOSE_PROJECT_ROOT:-.}/docker-compose.yml" stop "$COMPOSE_SERVICE" || true
-  docker compose -f "${KEEPSAKE_COMPOSE_PROJECT_ROOT:-.}/docker-compose.yml" rm -f "$COMPOSE_SERVICE" || true
-  docker compose -f "${KEEPSAKE_COMPOSE_PROJECT_ROOT:-.}/docker-compose.yml" up -d --no-deps "$COMPOSE_SERVICE"
-  log_success "✅ Container for $COMPOSE_SERVICE restarted with updated image"
-fi
-
 if [ "${K8S_DEPLOY:-false}" = "true" ]; then
   log_info "🚀 Deploying to Kubernetes..."
   "$SCRIPT_DIR/deploy-k8s.sh"

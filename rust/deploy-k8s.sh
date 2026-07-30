@@ -32,7 +32,7 @@ case "$CLUSTER_TYPE" in
 esac
 
 if [[ -n "${HELM_RELEASE:-}" ]]; then
-  HELM_CHART_PATH="${HELM_CHART_PATH:-$KEEPSAKE_PROJECT_ROOT/dpk-infra/charts/$HELM_RELEASE}"
+  HELM_CHART_PATH="${HELM_CHART_PATH:-${WORKSPACE_ROOT}/dpk-infra/charts/$HELM_RELEASE}"
   log_info "📦 Helm upgrade: $HELM_RELEASE in $K8S_NAMESPACE"
 
   if [[ ! -d "$HELM_CHART_PATH" ]]; then

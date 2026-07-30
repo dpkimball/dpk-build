@@ -6,7 +6,7 @@ GitHub repository: [`dpkimball/dpk-build`](https://github.com/dpkimball/dpk-buil
 
 Shared `make b` pipeline for DPK platform and Keepsake application repos. Every `make b` call across consuming repos ultimately sources and executes these scripts.
 
-**Stability:** Local checkout folder is `dpk-build` (was `keepsake-scripts`). Env vars such as `KEEPSAKE_SCRIPTS_ROOT` stay stable until a dedicated env migration.
+**Stability:** Local checkout folder is `dpk-build` (was `keepsake-scripts`). Path env vars: `SSD`, `WORKSPACE_ROOT`, `BUILD_ROOT`.
 
 **Sibling:** Remote CI (reusable GitHub Actions workflows, base images, deploy families) lives in [`dpk-ci`](https://github.com/dpkimball/dpk-ci) (was `keepsake-images`). Local `make b` does not replace those workflows.
 
@@ -70,8 +70,10 @@ These must be set (or available via `env.sh`) before running any script:
 
 | Variable | Used by | Notes |
 |----------|---------|-------|
-| `KEEPSAKE_SCRIPTS_ROOT` | all scripts | Path to this directory |
-| `PROJECT_ROOT` | `build-wheel.sh`, `build-docker-image.sh` | Root of the consuming project |
+| `SSD` | `paths.sh` | External volume mount (default `/Volumes/KeepsakeSSD`) |
+| `WORKSPACE_ROOT` | `paths.sh` | Umbrella checkout (default `$SSD/dpk-workspace`) |
+| `BUILD_ROOT` | all scripts | Path to this directory (`dpk-build`) |
+| `PROJECT_ROOT` | project `env.sh` | That consuming repo (set after sourcing `BUILD_ROOT/env.sh`) |
 | `PROJECT_VENV_DIR` | `build.sh`, `build-wheel.sh` | Path to virtualenv (default: `.venv`) |
 | `PYPI_HOST` | `build-wheel.sh`, `get_latest_pypi_version.sh` | Local PyPI hostname (default: `localhost`) |
 | `PYPI_PORT` | `build-wheel.sh`, `get_latest_pypi_version.sh` | Local PyPI port (default: `31126`) |
@@ -93,7 +95,7 @@ Optional overrides: `PYPI_HOST_OVERRIDE`, `PYPI_PORT_OVERRIDE` (take precedence 
 
 ```bash
 # In a project's env.sh:
-source "$KEEPSAKE_SCRIPTS_ROOT/env.sh"
+source "$BUILD_ROOT/env.sh"
 export IMAGE_NAME="my-service"
 export HELM_RELEASE="my-service"   # single chart — wins over inherited HELM_RELEASES
 
@@ -109,7 +111,7 @@ export HELM_RELEASES="keepsake-prestart,keepsake-backend"
 
 Single-release projects should set `HELM_RELEASE` (and may `unset HELM_RELEASES` in project `env.sh` for clarity).
 
-`env.sh` sources `keepsake-paths.sh` for canonical SSD-relative project roots.
+`env.sh` sources `paths.sh` for canonical SSD-relative project roots.
 
 ---
 

@@ -3,15 +3,15 @@
 Copy both files to your project root:
 
 ```bash
-cp $KEEPSAKE_SCRIPTS_ROOT/templates/Makefile   ./Makefile
-cp $KEEPSAKE_SCRIPTS_ROOT/templates/env.sh     ./env.sh
+cp $BUILD_ROOT/templates/Makefile   ./Makefile
+cp $BUILD_ROOT/templates/env.sh     ./env.sh
 chmod +x env.sh
 ```
 
 Then edit two things:
 
 **`Makefile`**
-- Set `KEEPSAKE_SCRIPTS_ROOT` depth (`../` for a top-level repo, `../../` for a sub-project)
+- Set `BUILD_ROOT` depth (`../` for a top-level repo, `../../` for a sub-project)
 - Set `INTERNAL_PKGS` to the space-separated list of internal packages this project depends on (leave empty if none)
 
 **`env.sh`**

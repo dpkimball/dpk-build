@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-source "$KEEPSAKE_SCRIPTS_ROOT/utils.sh"
+source "$BUILD_ROOT/utils.sh"
 
 log_info "🐍 Ensuring virtualenv exists..."
 

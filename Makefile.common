@@ -1,28 +1,28 @@
 SHELL := /bin/bash
 
-# KEEPSAKE_SCRIPTS_ROOT must be set before this file is included.
+# BUILD_ROOT must be set before this file is included.
 # See templates/Makefile for the canonical project Makefile pattern.
 
 .PHONY: b test lint clean update-versions deploy-local help
 
 b:
-	$(KEEPSAKE_SCRIPTS_ROOT)/build.sh
+	$(BUILD_ROOT)/build.sh
 
 test:
-	$(KEEPSAKE_SCRIPTS_ROOT)/test.sh
+	$(BUILD_ROOT)/test.sh
 
 lint:
-	$(KEEPSAKE_SCRIPTS_ROOT)/lint.sh
+	$(BUILD_ROOT)/lint.sh
 
 clean:
 	rm -rf dist/ build/ .venv/ *.egg-info __pycache__
 
 update-versions:
 	PYPROJECT=$(CURDIR)/pyproject.toml INTERNAL_PKGS="$(INTERNAL_PKGS)" \
-	  $(KEEPSAKE_SCRIPTS_ROOT)/update-versions.sh
+	  $(BUILD_ROOT)/update-versions.sh
 
 deploy-local:
-	$(KEEPSAKE_SCRIPTS_ROOT)/python/build-wheel.sh
+	$(BUILD_ROOT)/python/build-wheel.sh
 
 help:
 	@echo "Standard targets (from Makefile.common):"

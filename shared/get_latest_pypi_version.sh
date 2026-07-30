@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source "$KEEPSAKE_SCRIPTS_ROOT/env.sh"
+source "$BUILD_ROOT/env.sh"
 
 set -euo pipefail
 # 🧾 Usage: ./get_latest_pypi_version.sh <package-name>

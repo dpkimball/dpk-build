@@ -6,16 +6,18 @@
 # Individual projects can source this file and override project-specific variables.
 #
 # Usage in project env.sh:
-#   source "$KEEPSAKE_SCRIPTS_ROOT/env.sh"
+#   source "$BUILD_ROOT/env.sh"
 #   # Then override project-specific variables
 # =============================================================================
 
 # =============================================================================
-# Global Project Paths (canonical: KeepsakeSSD — see keepsake-paths.sh)
+# Global Project Paths (canonical: SSD — see paths.sh)
 # =============================================================================
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=keepsake-paths.sh
-[ -f "$_SCRIPT_DIR/keepsake-paths.sh" ] && source "$_SCRIPT_DIR/keepsake-paths.sh"
+# shellcheck source=paths.sh
+[ -f "$_SCRIPT_DIR/paths.sh" ] && source "$_SCRIPT_DIR/paths.sh"
+# When this file is sourced, BUILD_ROOT is this directory.
+export BUILD_ROOT="$_SCRIPT_DIR"
 unset _SCRIPT_DIR
 
 # =============================================================================
@@ -104,7 +106,7 @@ export FRONTEND_URL="${FRONTEND_URL:-${KEEPSAKE_FRONTEND_URL}}"
 # =============================================================================
 export CLEAN="${CLEAN:-false}"
 export DOCKERFILE_DIR="${DOCKERFILE_DIR:-.}"
-export ENV_STORE="${ENV_STORE:-$KEEPSAKE_SCRIPTS_ROOT/.env.versions}"
+export ENV_STORE="${ENV_STORE:-$BUILD_ROOT/.env.versions}"
 export TAG="${TAG:-$(date +"%Y%m%d-%H%M")}"
 export DEFAULT_IMAGE_TAG="${DEFAULT_IMAGE_TAG:-latest}"
 export COLOR_GREEN="${COLOR_GREEN:-\033[0;32m}"
