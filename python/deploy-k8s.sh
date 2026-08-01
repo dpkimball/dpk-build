@@ -191,13 +191,23 @@ if [[ -n "${HELM_RELEASE:-}" ]]; then
 
   print_status "🖼️  Using image: $IMAGE_REPOSITORY:latest"
 
+  HELM_SET_ARGS=(
+    --set image.repository="$IMAGE_REPOSITORY"
+    --set image.tag="latest"
+    --set image.pullPolicy="Always"
+  )
+  # Optional companion worker image pin (ConfigMap worker-image → WORKER_IMAGE env).
+  if [[ -n "${WORKER_IMAGE_NAME:-}" ]]; then
+    WORKER_IMAGE_REF="${REGISTRY_URL}/${WORKER_IMAGE_NAME}:latest"
+    print_status "🖼️  Using worker image: $WORKER_IMAGE_REF"
+    HELM_SET_ARGS+=(--set "config.workerImage=${WORKER_IMAGE_REF}")
+  fi
+
   helm upgrade --install "$HELM_RELEASE" \
     --namespace "$K8S_NAMESPACE" \
     --create-namespace \
     --values "$HELM_CHART_PATH/values-dev.yaml" \
-    --set image.repository="$IMAGE_REPOSITORY" \
-    --set image.tag="latest" \
-    --set image.pullPolicy="Always" \
+    "${HELM_SET_ARGS[@]}" \
     "$HELM_CHART_PATH" || {
     print_error "❌ Helm upgrade/install failed"
     exit 1
@@ -278,6 +288,17 @@ else
   # Construct registry URL for image repository
   REGISTRY_URL="${DOCKER_REGISTRY_URL}"
   IMAGE_REPOSITORY="$REGISTRY_URL/$IMAGE_NAME"
+
+  HELM_SET_ARGS=(
+    --set image.repository="$IMAGE_REPOSITORY"
+    --set image.tag="latest"
+    --set image.pullPolicy="Always"
+  )
+  if [[ -n "${WORKER_IMAGE_NAME:-}" ]]; then
+    WORKER_IMAGE_REF="${REGISTRY_URL}/${WORKER_IMAGE_NAME}:latest"
+    print_status "🖼️  Using worker image: $WORKER_IMAGE_REF"
+    HELM_SET_ARGS+=(--set "config.workerImage=${WORKER_IMAGE_REF}")
+  fi
   
   # Update the image in the Helm values
   # Use --install to create release if it doesn't exist
@@ -285,9 +306,7 @@ else
     --namespace "$K8S_NAMESPACE" \
     --create-namespace \
     --values "$HELM_CHART_PATH/values-dev.yaml" \
-    --set image.repository="$IMAGE_REPOSITORY" \
-    --set image.tag="latest" \
-    --set image.pullPolicy="Always" \
+    "${HELM_SET_ARGS[@]}" \
     "$HELM_CHART_PATH" || {
     print_error "❌ Helm upgrade/install failed"
     exit 1

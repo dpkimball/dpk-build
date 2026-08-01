@@ -170,3 +170,35 @@ if [ "$CLEANUP_OLD_IMAGES" = true ]; then
 
   print_status "✅ Final cleanup complete"
 fi
+
+# Companion images (e.g. security-audit-runner alongside the API image).
+# Format: "image_name:path/to/Dockerfile[,image_name2:path/to/Dockerfile2]"
+# Context is always DOCKERFILE_DIR (default: project root). Nested recursion is skipped.
+if [ -n "${EXTRA_IMAGE_BUILDS:-}" ] && [ "${_DPK_EXTRA_IMAGE_NESTED:-}" != "1" ]; then
+  print_status "🐳 Building EXTRA_IMAGE_BUILDS: $EXTRA_IMAGE_BUILDS"
+  IFS=',' read -ra _EXTRA_BUILDS <<< "$EXTRA_IMAGE_BUILDS"
+  for _spec in "${_EXTRA_BUILDS[@]}"; do
+    _spec=$(echo "$_spec" | xargs)
+    [ -z "$_spec" ] && continue
+    _extra_name="${_spec%%:*}"
+    _extra_dockerfile="${_spec#*:}"
+    if [ -z "$_extra_name" ] || [ "$_extra_name" = "$_spec" ] || [ -z "$_extra_dockerfile" ]; then
+      print_error "EXTRA_IMAGE_BUILDS entry must be image_name:Dockerfile path, got: $_spec"
+      exit 1
+    fi
+    print_status "🐳 Extra image: IMAGE_NAME=$_extra_name DOCKERFILE=$_extra_dockerfile"
+    (
+      export _DPK_EXTRA_IMAGE_NESTED=1
+      export IMAGE_NAME="$_extra_name"
+      export DOCKERFILE="$_extra_dockerfile"
+      export DOCKERFILE_DIR="${DOCKERFILE_DIR:-.}"
+      # Reuse the same DATE_TAG so companion images share the build stamp.
+      export DATE_TAG
+      "$SCRIPT_DIR/build-docker.sh"
+    ) || {
+      print_error "Failed to build extra image $_extra_name"
+      exit 1
+    }
+  done
+  print_status "✅ EXTRA_IMAGE_BUILDS complete"
+fi
