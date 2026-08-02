@@ -1,13 +1,11 @@
-# Consumer workflow: run security-audit on pull requests and default-branch pushes.
+# Consumer workflow: thin call into dpk-ci security-audit-dispatch.
+# Scan execution lives in the Security Audit Kubernetes service (memoryai).
 # Generated from security-audit/workflows/templates/security-audit-pr.yml — prefer sync-pr-workflows.py.
 #
-# Dispatches audit-on-request.yml in dpkimball/security-audit so the isolated
-# memoryai runner executes the scan. workflow_call would queue on this repo's
-# self-hosted runners, which lack the security-audit label.
+# Required: vars.SECURITY_AUDIT_API_URL, secrets.SECURITY_AUDIT_API_KEY
 #
-# Docs-only PRs (markdown/rst/txt) are excluded via paths-ignore so they do not
-# queue a runner. An in-job gate is a backup if the workflow still runs. Keep
-# runs-on: self-hosted — GitHub-hosted ubuntu-latest may be blocked by org billing.
+# PR audits wait until non-security-audit checks for the head SHA have passed
+# (or been skipped). Failed CI cancels the audit so runners are not wasted.
 
 name: Security Audit
 
@@ -30,148 +28,108 @@ concurrency:
 permissions:
   contents: read
   pull-requests: read
+  checks: read
 
 jobs:
-  security-audit:
+  wait-for-ci:
+    name: Wait for CI
+    if: github.event_name == 'pull_request'
     runs-on: self-hosted
     timeout-minutes: 90
-
     steps:
-      - name: Decide whether to audit
-        id: gate
+      - name: Wait for non-audit checks to succeed
         env:
           GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           export PATH="${HOME}/.local/bin:${PATH}"
 
-          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
-            echo "run_audit=true" >> "$GITHUB_OUTPUT"
-            echo "reason=non-pull_request-event" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          FILES="$(gh api --paginate \
-            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            --jq '.[].filename')"
-
-          if [[ -z "${FILES}" ]]; then
-            echo "run_audit=true" >> "$GITHUB_OUTPUT"
-            echo "reason=empty-file-list" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          NON_DOC=""
-          while IFS= read -r f; do
-            [[ -z "${f}" ]] && continue
-            case "${f}" in
-              *.md|*.mdx|*.rst|*.txt) ;;
-              *)
-                NON_DOC="${NON_DOC}${f}"$'\n'
-                ;;
+          is_audit_check() {
+            local name="$1"
+            local lname
+            # Normalize spaces/underscores so case patterns need no spaces
+            # (bash case arms cannot contain unquoted spaces).
+            lname="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]' | tr ' _' '--')"
+            case "$lname" in
+              *security-audit*|*wait-for-ci*) return 0 ;;
+              *) return 1 ;;
             esac
-          done <<< "${FILES}"
+          }
 
-          if [[ -z "${NON_DOC}" ]]; then
-            echo "run_audit=false" >> "$GITHUB_OUTPUT"
-            echo "reason=docs-only" >> "$GITHUB_OUTPUT"
-            {
-              echo "Docs-only PR (md/mdx/rst/txt); skipping full security audit."
-              echo "${FILES}"
-            }
-          else
-            echo "run_audit=true" >> "$GITHUB_OUTPUT"
-            echo "reason=code-or-config-changes" >> "$GITHUB_OUTPUT"
-          fi
+          echo "Waiting for CI on ${REPO}@${HEAD_SHA} (excluding security-audit / wait-for-ci)"
+          deadline=$((SECONDS + 5400))
+          saw_relevant=0
 
-      - name: Resolve target ref
-        if: steps.gate.outputs.run_audit == 'true'
-        id: target
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "ref=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
-          fi
+          while (( SECONDS < deadline )); do
+            # Check Runs API
+            JSON="$(gh api --paginate \
+              "repos/${REPO}/commits/${HEAD_SHA}/check-runs" \
+              --jq '[.check_runs[] | {name, status, conclusion}]' 2>/dev/null || echo '[]')"
 
-      - name: Trigger remote audit
-        if: steps.gate.outputs.run_audit == 'true'
-        id: trigger
-        env:
-          GH_TOKEN: ${{ secrets.SECURITY_AUDIT_READ_TOKEN || secrets.PAT_WORKFLOWGITACTION }}
-        run: |
-          set -euo pipefail
-          export PATH="${HOME}/.local/bin:${PATH}"
-          CORRELATION="${{ github.run_id }}"
-          AUDIT_MODE="${{ github.event_name == 'pull_request' && 'pull-request' || (github.event_name == 'push' && 'default-branch' || 'manual') }}"
+            pending=0
+            failed=0
+            relevant=0
+            while IFS=$'\t' read -r name status conclusion; do
+              [[ -z "${name}" ]] && continue
+              if is_audit_check "$name"; then
+                continue
+              fi
+              relevant=1
+              saw_relevant=1
+              st="$(printf '%s' "$status" | tr '[:upper:]' '[:lower:]')"
+              conc="$(printf '%s' "${conclusion:-}" | tr '[:upper:]' '[:lower:]')"
+              case "$st" in
+                queued|in_progress|waiting|requested|pending)
+                  pending=1
+                  echo "pending: ${name} (${st})"
+                  ;;
+                completed)
+                  case "$conc" in
+                    success|skipped|neutral) ;;
+                    *)
+                      echo "::error::CI check failed: ${name} conclusion=${conc}"
+                      failed=1
+                      ;;
+                  esac
+                  ;;
+              esac
+            done < <(printf '%s\n' "$JSON" | jq -r '.[] | [.name, .status, (.conclusion // "")] | @tsv')
 
-          gh workflow run audit-on-request.yml \
-            -R dpkimball/security-audit \
-            -f "repository-name=dpk-build" \
-            -f "github-repository=dpkimball/dpk-build" \
-            -f "target-ref=${{ steps.target.outputs.ref }}" \
-            -f "repository-classification=low" \
-            -f "audit-mode=${AUDIT_MODE}" \
-            -f "full-history=false" \
-            -f "create-issues=false" \
-            -f "caller-run-id=${CORRELATION}"
-
-          echo "correlation=${CORRELATION}" >> "$GITHUB_OUTPUT"
-
-      - name: Wait for audit completion
-        if: steps.gate.outputs.run_audit == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.SECURITY_AUDIT_READ_TOKEN || secrets.PAT_WORKFLOWGITACTION }}
-        run: |
-          set -euo pipefail
-          export PATH="${HOME}/.local/bin:${PATH}"
-          CORRELATION="${{ steps.trigger.outputs.correlation }}"
-          MARKER="[caller:${CORRELATION}]"
-          RUN_ID=""
-
-          for _ in $(seq 1 30); do
-            RUN_ID=$(gh run list -R dpkimball/security-audit \
-              --workflow audit-on-request.yml \
-              --limit 25 \
-              --json databaseId,displayTitle \
-              --jq ".[] | select(.displayTitle | contains(\"${MARKER}\")) | .databaseId" | head -1)
-            if [[ -n "${RUN_ID}" ]]; then
-              break
+            if (( failed )); then
+              exit 1
             fi
-            sleep 5
+
+            if (( relevant == 0 )); then
+              # CI may not have registered checks yet; keep waiting briefly.
+              if (( saw_relevant == 0 )) && (( SECONDS < 120 )); then
+                echo "No non-audit checks yet; waiting for CI to start..."
+                sleep 10
+                continue
+              fi
+              echo "No non-audit checks for this SHA (path filters may have skipped CI); proceeding."
+              exit 0
+            fi
+
+            if (( pending == 0 )); then
+              echo "All non-audit checks completed successfully."
+              exit 0
+            fi
+
+            sleep 15
           done
 
-          if [[ -z "${RUN_ID}" ]]; then
-            echo "::error::Timed out waiting for security audit run to appear."
-            exit 1
-          fi
+          echo "::error::Timed out waiting for CI checks to finish."
+          exit 1
 
-          echo "Watching remote audit run ${RUN_ID}"
-          gh run watch "${RUN_ID}" -R dpkimball/security-audit --exit-status
-
-      - name: Link remote audit run
-        if: always() && steps.gate.outputs.run_audit == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.SECURITY_AUDIT_READ_TOKEN || secrets.PAT_WORKFLOWGITACTION }}
-        run: |
-          CORRELATION="${{ steps.trigger.outputs.correlation }}"
-          MARKER="[caller:${CORRELATION}]"
-          RUN_ID=$(gh run list -R dpkimball/security-audit \
-            --workflow audit-on-request.yml \
-            --limit 25 \
-            --json databaseId,displayTitle \
-            --jq ".[] | select(.displayTitle | contains(\"${MARKER}\")) | .databaseId" | head -1) || true
-          if [[ -n "${RUN_ID}" ]]; then
-            URL=$(gh run view "${RUN_ID}" -R dpkimball/security-audit --json url -q .url)
-            echo "### Remote audit run" >> "$GITHUB_STEP_SUMMARY"
-            echo "[View on security-audit](${URL})" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Record docs-only skip
-        if: steps.gate.outputs.run_audit != 'true'
-        run: |
-          {
-            echo "### Security audit skipped"
-            echo "Reason: docs-only PR (changed files are only \`.md\` / \`.mdx\` / \`.rst\` / \`.txt\`)."
-            echo "Full audit still runs on default-branch push, workflow_dispatch, and weekly schedule."
-          } >> "$GITHUB_STEP_SUMMARY"
+  security-audit:
+    name: security-audit
+    needs: [wait-for-ci]
+    if: always() && (github.event_name != 'pull_request' || needs.wait-for-ci.result == 'success')
+    uses: dpkimball/dpk-ci/.github/workflows/security-audit-dispatch.yml@master
+    with:
+      repository_name: dpk-build
+      github_repository: dpkimball/dpk-build
+      classification: low
+    secrets: inherit
