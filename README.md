@@ -1,5 +1,9 @@
 # dpk-build
 
+[![Rust Tests](https://github.com/dpkimball/dpk-build/actions/workflows/rust-tests.yml/badge.svg)](https://github.com/dpkimball/dpk-build/actions/workflows/rust-tests.yml)
+[![ShellCheck](https://github.com/dpkimball/dpk-build/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/dpkimball/dpk-build/actions/workflows/shellcheck.yml)
+[![Security Audit](https://github.com/dpkimball/dpk-build/actions/workflows/security-audit.yml/badge.svg)](https://github.com/dpkimball/dpk-build/actions/workflows/security-audit.yml)
+
 Shared build pipeline for all DPK/Keepsake repos. Consuming repos include `Makefile.common` and add a `dpk.toml`. The Rust CLI binary (`dpk-build`) orchestrates all phases.
 
 ## Onboarding a consuming repo
@@ -47,6 +51,11 @@ deploy = false
 [docker]                      # required for image phase to run
 image_name = "my-service"
 platforms  = ["linux/amd64"]  # optional; multi-arch
+# Companion images (built after primary). Each entry: image_name:Dockerfile path
+extra_image_builds = ["my-runner:containers/my-runner/Dockerfile"]
+worker_image_name  = "my-runner"   # Helm --set config.workerImage
+# Extra docker/buildx flags (BuildKit --build-context, etc.)
+extra_args = "--build-context sibling=../sibling"
 
 [deploy]                      # values passed as env to deploy-k8s.sh
 helm_release   = "my-service" # mutually exclusive with helm_releases

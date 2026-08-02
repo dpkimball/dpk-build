@@ -22,7 +22,7 @@ fn test_sigint_produces_cancelled_status() {
     let dir = fixture("rust_slow");
     let bin = dpk_build_bin();
 
-    let mut child = Command::new(&bin)
+    let child = Command::new(&bin)
         .args(["test"])
         .current_dir(&dir)
         .env("BUILD_ROOT", build_root())

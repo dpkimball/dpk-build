@@ -141,30 +141,39 @@ pub(crate) fn base_env(ctx: &RunContext, skips: &SkipFlags) -> Vec<(OsString, Os
     if let Some(cfg) = &ctx.project_cfg {
         if let Some(docker) = &cfg.docker {
             if let Some(n) = &docker.image_name {
-                env.push((OsString::from("IMAGE_NAME"), OsString::from(n)));
+                set_or_update(&mut env, "IMAGE_NAME", OsString::from(n));
             }
             if let Some(p) = &docker.platforms {
-                env.push((
-                    OsString::from("DOCKER_PLATFORMS"),
-                    OsString::from(p.join(",")),
-                ));
+                set_or_update(&mut env, "DOCKER_PLATFORMS", OsString::from(p.join(",")));
+            }
+            if let Some(extras) = &docker.extra_image_builds {
+                if !extras.is_empty() {
+                    set_or_update(
+                        &mut env,
+                        "EXTRA_IMAGE_BUILDS",
+                        OsString::from(extras.join(",")),
+                    );
+                }
+            }
+            if let Some(w) = &docker.worker_image_name {
+                set_or_update(&mut env, "WORKER_IMAGE_NAME", OsString::from(w));
+            }
+            if let Some(args) = &docker.extra_args {
+                set_or_update(&mut env, "DOCKER_EXTRA_ARGS", OsString::from(args));
             }
         }
         if let Some(dep) = &cfg.deploy {
             if let Some(r) = &dep.helm_release {
-                env.push((OsString::from("HELM_RELEASE"), OsString::from(r)));
+                set_or_update(&mut env, "HELM_RELEASE", OsString::from(r));
             }
             if let Some(rs) = &dep.helm_releases {
-                env.push((
-                    OsString::from("HELM_RELEASES"),
-                    OsString::from(rs.join(",")),
-                ));
+                set_or_update(&mut env, "HELM_RELEASES", OsString::from(rs.join(",")));
             }
             if let Some(ns) = &dep.k8s_namespace {
-                env.push((OsString::from("K8S_NAMESPACE"), OsString::from(ns)));
+                set_or_update(&mut env, "K8S_NAMESPACE", OsString::from(ns));
             }
             if let Some(cp) = &dep.helm_chart_path {
-                env.push((OsString::from("HELM_CHART_PATH"), OsString::from(cp)));
+                set_or_update(&mut env, "HELM_CHART_PATH", OsString::from(cp));
             }
         }
     }

@@ -101,6 +101,11 @@ fi
 if [ -n "${VITE_MEDIA_BASE_URL:-}" ]; then
     BUILD_ARGS+=(--build-arg "VITE_MEDIA_BASE_URL=$VITE_MEDIA_BASE_URL")
 fi
+# Optional BuildKit / docker flags from dpk.toml [docker].extra_args → DOCKER_EXTRA_ARGS
+if [ -n "${DOCKER_EXTRA_ARGS:-}" ]; then
+  # shellcheck disable=SC2206
+  BUILD_ARGS+=(${DOCKER_EXTRA_ARGS})
+fi
 
 BUILD_ARGS+=(-t "$IMAGE_NAME:$DATE_TAG" "$DOCKERFILE_DIR")
 "${BUILD_ARGS[@]}"

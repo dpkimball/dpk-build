@@ -28,6 +28,14 @@ pub struct DockerSection {
     #[allow(dead_code)]
     pub dockerfile: Option<String>,
     pub platforms: Option<Vec<String>>,
+    /// Companion images built after the primary image.
+    /// Each entry is `image_name:path/to/Dockerfile` (comma-joined into EXTRA_IMAGE_BUILDS).
+    pub extra_image_builds: Option<Vec<String>>,
+    /// Companion image name pinned into Helm as `config.workerImage` (WORKER_IMAGE_NAME).
+    pub worker_image_name: Option<String>,
+    /// Extra args forwarded to `docker build` / buildx (DOCKER_EXTRA_ARGS), e.g. BuildKit
+    /// `--build-context` siblings for Rust services.
+    pub extra_args: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -138,4 +146,37 @@ pub fn load(path: &Path) -> Result<ProjectConfig, DpkError> {
     })?;
     cfg.validate()?;
     Ok(cfg)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_companion_image_and_extra_args() {
+        let cfg: ProjectConfig = toml::from_str(
+            r#"
+[docker]
+image_name = "security-audit-api"
+extra_image_builds = ["security-audit-runner:containers/security-audit-runner/Dockerfile"]
+worker_image_name = "security-audit-runner"
+extra_args = "--build-context dpk2=../dpk2 --build-context bindb=../bindb"
+"#,
+        )
+        .unwrap();
+        let docker = cfg.docker.expect("docker section");
+        assert_eq!(docker.image_name.as_deref(), Some("security-audit-api"));
+        assert_eq!(
+            docker.extra_image_builds.as_ref().map(|v| v.join(",")),
+            Some("security-audit-runner:containers/security-audit-runner/Dockerfile".to_string())
+        );
+        assert_eq!(
+            docker.worker_image_name.as_deref(),
+            Some("security-audit-runner")
+        );
+        assert_eq!(
+            docker.extra_args.as_deref(),
+            Some("--build-context dpk2=../dpk2 --build-context bindb=../bindb")
+        );
+    }
 }

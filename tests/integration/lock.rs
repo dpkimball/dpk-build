@@ -28,23 +28,33 @@ fn run_dpk(project_dir: &PathBuf, args: &[&str]) -> (String, String, i32) {
 fn test_second_invocation_returns_already_running() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let lock_path = tmp.path().join(".dpk-build.lock");
+    let ready_path = tmp.path().join(".lock-ready");
 
     // Hold the lock externally with python3 (always available on macOS/Linux).
-    // python3 acquires an exclusive flock on the lock file then sleeps.
+    // Signal readiness via a side file so CI load cannot race the 200ms sleep.
     let lock_holder = Command::new("python3")
         .args([
             "-c",
             "import fcntl,time,sys; \
              f=open(sys.argv[1],'w'); \
              fcntl.flock(f.fileno(), fcntl.LOCK_EX); \
+             open(sys.argv[2],'w').write('1'); \
              time.sleep(10)",
             lock_path.to_str().unwrap(),
+            ready_path.to_str().unwrap(),
         ])
         .spawn()
         .expect("spawn python3 lock holder");
 
-    // Give python3 time to acquire the lock before we try.
-    std::thread::sleep(Duration::from_millis(200));
+    // Wait until the holder has the exclusive flock (not a fixed sleep).
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while !ready_path.exists() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "python3 lock holder did not acquire flock in time"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    }
 
     // tmp has no language files, so language detection will fail before we even
     // try to acquire the lock. Create a pyproject.toml so detection succeeds.
@@ -57,7 +67,10 @@ fn test_second_invocation_returns_already_running() {
     let (stdout, _stderr, code) = run_dpk(&tmp.path().to_path_buf(), &["lint"]);
 
     // Kill the lock holder now that we have our result.
-    drop(lock_holder);
+    let _ = Command::new("kill")
+        .arg(lock_holder.id().to_string())
+        .status();
+    let _ = lock_holder.wait_with_output();
 
     assert_ne!(code, 0, "should exit nonzero when lock is held");
     let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("valid JSON");
