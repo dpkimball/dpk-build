@@ -8,7 +8,7 @@ pub enum Language {
     Python,
     Rust,
     Node,
-    /// Flink/Maven services: image + deploy via shared docker/helm scripts; lint/test/build skipped unless implemented.
+    /// Flink/Maven services: lint/test/build via Maven; image/deploy via shared docker/helm scripts.
     Java,
 }
 

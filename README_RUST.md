@@ -1,51 +1,30 @@
 # Rust support in dpk-build
 
-Prefer **`make b`** (via `Makefile.common` → `dpk-build deliver`). The scripts under `rust/` are the implementations used by deliver and by optional manual workflows.
+Prefer **`make b`** → `dpk-build deliver`. Scripts under `rust/` implement image/deploy (and optional manual flows).
 
 ## Deliver path
 
-| Phase | Script / tool |
+| Phase | Implementation |
 |-------|----------------|
-| lint / test / build | Rust CLI (`cargo fmt` / `clippy` / `test` / `build`) |
+| lint | `cargo clippy --workspace --all-targets --all-features -- -D warnings` |
+| test | `cargo test --all` |
+| build | `cargo build --release --workspace` |
 | image | `rust/build-docker.sh` |
 | deploy | `rust/deploy-k8s.sh` |
 
-## Optional scripts under `rust/`
+Full phase tables: [docs/phases.md](docs/phases.md).
 
-### `rust/build.sh`
+## Optional scripts
 
-Legacy full orchestrator (lint → test → release binary → optional image). Prefer `dpk-build deliver` or `make b`.
-
-```bash
-./rust/build.sh
-./rust/build.sh --clean
-SKIP_LINT=true ./rust/build.sh
-```
-
-### `rust/build-docker.sh`
-
-Multi-arch image build + push (used by the deliver image phase).
-
-```bash
-./rust/build-docker.sh
-CLEAN=true ./rust/build-docker.sh
-IMAGE_NAME=my-rust-app ./rust/build-docker.sh
-```
-
-### `rust/launch-dev.sh`
-
-Run a local container for interactive development.
-
-```bash
-./rust/launch-dev.sh
-CLEAN=true ./rust/launch-dev.sh
-IMAGE_NAME=my-rust-app CONTAINER_NAME=my-dev ./rust/launch-dev.sh
-```
-
-### `rust/build-crate.sh`
-
-Build a crate without the full deliver pipeline (manual / niche).
+| Script | Use |
+|--------|-----|
+| `rust/build.sh` | Legacy full orchestrator; prefer deliver |
+| `rust/build-docker.sh` | Multi-arch image (deliver image phase) |
+| `rust/deploy-k8s.sh` | Helm deploy (deliver deploy phase) |
+| `rust/launch-dev.sh` | Local interactive container |
+| `rust/build-crate.sh` | Single crate without full deliver |
 
 ## Makefile
 
-Aligned Rust services/libraries use the lean project `Makefile` + `include $(BUILD_ROOT)/Makefile.common` (same as Python). `Makefile.rust-common` remains for older known-Rust layouts that call `rust/build.sh` directly.
+Aligned projects: lean `Makefile` + `include $(BUILD_ROOT)/Makefile.common`.  
+`Makefile.rust-common` remains only for older layouts that still call `rust/build.sh` directly.

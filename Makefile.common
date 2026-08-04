@@ -8,7 +8,7 @@ SHELL := /bin/bash
 #   2. bootstrap.sh in BUILD_ROOT (local dev — builds from source)
 #
 # Behaviour:
-#   local (CI unset): full pipeline — lint → test → build → image → deploy
+#   local (CI unset): full pipeline — lint → test → build → image → deploy → verify
 #   CI (CI=true):     lint → test → build only (image and deploy skipped)
 
 .PHONY: b b-legacy test lint clean update-versions deploy-local help

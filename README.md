@@ -4,26 +4,29 @@
 [![ShellCheck](https://github.com/dpkimball/dpk-build/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/dpkimball/dpk-build/actions/workflows/shellcheck.yml)
 [![Security Audit](https://github.com/dpkimball/dpk-build/actions/workflows/security-audit.yml/badge.svg)](https://github.com/dpkimball/dpk-build/actions/workflows/security-audit.yml)
 
-Shared build pipeline for all DPK/Keepsake repos. Consuming repos include `Makefile.common` and add a `dpk.toml`. The Rust CLI binary (`dpk-build`) orchestrates all phases.
+Shared build pipeline for DPK repos. Consumers include `Makefile.common` and add a `dpk.toml`. The Rust CLI (`dpk-build`) runs lint → test → build → image → deploy → verify.
 
-## Onboarding a consuming repo
+## Onboarding
 
-**`Makefile`** (project root):
+**`Makefile`:**
 ```makefile
 BUILD_ROOT ?= ../dpk-build
 include $(BUILD_ROOT)/Makefile.common
 ```
 
-**`dpk.toml`** (project root):
+**`dpk.toml`:**
 ```toml
 [project]
 name = "my-service"
-language = "python"   # python | rust | node | java
+language = "python"   # python | rust | java  (optional; auto-detected)
 ```
 
-Language auto-detected if omitted: `Cargo.toml`→rust, `pyproject.toml`→python, `package.json`→node, `pom.xml`/`build.gradle`→java. Error if ambiguous.
+Auto-detect: `Cargo.toml` → rust, `pyproject.toml` → python, `pom.xml` / `build.gradle` → java. Error if ambiguous. Set `project.language` or `BUILD_LANG` to override.
 
-**Java / Flink:** lint/test/build run Maven against `pom.xml`, `jobs/pom.xml`, or `project.maven_pom` in `dpk.toml`:
+**Supported languages:** python, rust, java.  
+**Node:** `package.json` may be detected, but deliver phases are not implemented (phase fails).
+
+### Java / Flink
 
 | Phase | Maven goals |
 |-------|-------------|
@@ -31,52 +34,53 @@ Language auto-detected if omitted: `Cargo.toml`→rust, `pyproject.toml`→pytho
 | test | `test` |
 | build | `package` (`-DskipTests`) |
 
-Maven runs via local `mvn` when on PATH; otherwise Docker (`MAVEN_IMAGE`, default `maven:3.9-eclipse-temurin-17`) with the project tree and `~/.m2` mounted (same pattern as PDP `make build-job`).
+POM: `MAVEN_POM` env → `project.maven_pom` → `pom.xml` → `jobs/pom.xml`.  
+Runner: local `mvn`, else Docker (`MAVEN_IMAGE`, default `maven:3.9-eclipse-temurin-17`).
 
-Image/deploy use the shared docker/helm scripts (`[docker]` / `[deploy]`). Set `[skip] lint/tests/build = true` when `make b` should only ship a runtime image (job JARs via project helpers such as `make build-job`).
+Image/deploy use `[docker]` / `[deploy]`. Set `[skip] lint/tests/build = true` when `make b` should only ship a runtime image.
 
 ## `make b`
 
-Resolves binary via PATH then falls back to `bootstrap.sh` (builds from source). Runs `dpk-build deliver`.
+Resolves `dpk-build` on PATH, else `bootstrap.sh`. Runs `dpk-build deliver`.
 
 | Mode | Phases |
 |------|--------|
 | local | lint → test → build → image → deploy → verify |
-| `CI=true` | lint → test → build (image/deploy skipped via `--skip-image --skip-deploy`) |
+| `CI=true` | lint → test → build (`--skip-image --skip-deploy`) |
 
-Phase stops pipeline on failure; subsequent phases get `reason: previous_phase_failed`.
+Failure stops the pipeline; later phases get `reason: previous_phase_failed`.
 
-## dpk.toml full schema
+Per-phase detail: [docs/phases.md](docs/phases.md).
+
+## `dpk.toml` schema
 
 ```toml
 [project]
-name = "my-service"           # optional; falls back to directory name
+name = "my-service"           # optional; directory name if omitted
 language = "python"           # optional; auto-detected
-maven_pom = "jobs/pom.xml"    # java only; optional override (default pom.xml or jobs/pom.xml)
+maven_pom = "jobs/pom.xml"    # java only
 
-[skip]                        # permanent defaults for `deliver` only
+[skip]                        # deliver defaults only
 lint   = false
 tests  = false
 build  = false
 image  = false
 deploy = false
 
-[docker]                      # required for image phase to run
+[docker]                      # required for image phase
 image_name = "my-service"
-dockerfile = "Dockerfile"     # optional; default Dockerfile (PDP uses Dockerfile.runtime)
-dockerfile_dir = "."          # optional build context
-platforms  = ["linux/amd64"]  # optional; multi-arch
-# Companion images (built after primary). Each entry: image_name:Dockerfile path
+dockerfile = "Dockerfile"
+dockerfile_dir = "."
+platforms  = ["linux/amd64"]
 extra_image_builds = ["my-runner:containers/my-runner/Dockerfile"]
-worker_image_name  = "my-runner"   # Helm --set config.workerImage
-# Extra docker/buildx flags (BuildKit --build-context, etc.)
+worker_image_name  = "my-runner"
 extra_args = "--build-context sibling=../sibling"
 
-[deploy]                      # values passed as env to python|rust/deploy-k8s.sh
+[deploy]
 helm_release   = "my-service" # mutually exclusive with helm_releases
-helm_releases  = ["a", "b"]   # multi-chart; do not set with helm_release
+helm_releases  = ["a", "b"]
 k8s_namespace  = "dev"
-helm_chart_path = "charts/"   # when chart dir ≠ release name
+helm_chart_path = "charts/"
 
 [verify]
 command = ["curl", "-f", "http://localhost:8080/health"]
@@ -95,55 +99,51 @@ deploy_secs = 300
 verify_secs = 60
 ```
 
-- Image phase skips with `not_configured` when `[docker]` section is absent.
-- Deploy phase errors with `deploy_requires_workspace_manifest` when no `dpk-workspace.toml` is found.
+- No `[docker]` → image skipped (`not_configured`).
+- No usable `dpk-workspace.toml` allowlist → deploy fails (`deploy_requires_workspace_manifest`).
+- No `[verify]` → verify skipped (`not_configured`).
 
-## dpk-workspace.toml
+## `dpk-workspace.toml`
 
-Place at workspace root (or set `WORKSPACE_ROOT` env var). Required for local deploy.
+Workspace root (or `WORKSPACE_ROOT`). Required for local deploy.
 
 ```toml
 [deploy.local.contexts]
-allowlist = ["rancher-desktop"]   # kubectl context names permitted to deploy
+allowlist = ["rancher-desktop"]
 
-[projects]                        # optional: named project registry
-my-service = "my-service/"        # relative path from workspace root
+[projects]
+my-service = "my-service/"
 ```
 
-Named projects enable `dpk-build deliver my-service` from any directory.
+Named projects: `dpk-build deliver my-service` from any directory.
 
 ## Skip flags
 
-Priority: CLI flag > env var > `dpk.toml [skip]` (deliver only).
+Priority: CLI > env > `dpk.toml [skip]` (deliver only).
 
-| Phase | CLI flag | Env var |
-|-------|----------|---------|
+| Phase | CLI | Env |
+|-------|-----|-----|
 | lint | `--skip-lint` | `SKIP_LINT=true` |
 | test | `--skip-tests` | `SKIP_TESTS=true` |
 | build | `--skip-build` | `SKIP_BUILD=true` |
 | image | `--skip-image` | `SKIP_DOCKER_IMAGE=true` or `SKIP_IMAGE=true` |
 | deploy | `--skip-deploy` | `SKIP_K8S_DEPLOY=true` |
 
-## CLI reference
+## CLI
 
 ```
 dpk-build deliver [project] [--skip-lint] [--skip-tests] [--skip-build] [--skip-image] [--skip-deploy]
-dpk-build lint    [project]
-dpk-build test    [project]
-dpk-build build   [project]
-dpk-build image   [project]
-dpk-build deploy  [project] [--target local]
-dpk-build verify  [project]
-dpk-build version show [project]
-dpk-build version bump [project]
-dpk-build doctor  [project] [--online]
+dpk-build lint | test | build | image | deploy | verify [project]
+dpk-build deploy [project] [--target local]
+dpk-build version show | bump [project]
+dpk-build doctor [project] [--online]
 
 Global: --quiet  --verbose  --dry-run
 ```
 
 ## JSON output
 
-One JSON line emitted to stdout on completion. Live process output goes to stderr.
+One JSON line on stdout; live logs on stderr.
 
 ```json
 {
@@ -153,40 +153,45 @@ One JSON line emitted to stdout on completion. Live process output goes to stder
   "status": "success",
   "duration_ms": 12345,
   "phases": {
-    "lint":   { "status": "success",  "duration_ms": 234 },
-    "build":  { "status": "skipped",  "duration_ms": 0, "reason": "project_default" },
-    "deploy": { "status": "failure",  "duration_ms": 0, "error": { "code": "context_not_in_allowlist", "message": "..." } },
-    "verify": { "status": "skipped",  "duration_ms": 0, "reason": "previous_phase_failed" }
+    "lint":   { "status": "success", "duration_ms": 234 },
+    "build":  { "status": "skipped", "duration_ms": 0, "reason": "project_default" },
+    "deploy": { "status": "failure", "duration_ms": 0, "error": { "code": "context_not_in_allowlist", "message": "..." } },
+    "verify": { "status": "skipped", "duration_ms": 0, "reason": "previous_phase_failed" }
   }
 }
 ```
 
-**`status`:** `success` `failure` `cancelled`
+**`status`:** `success` · `failure` · `cancelled`  
+**Phase `status`:** `success` · `failure` · `skipped` · `timed_out` · `cancelled`  
+**Skip `reason`:** `cli` · `environment` · `project_default` · `not_configured` · `previous_phase_failed` · `dry_run` · `cancelled`  
+**Exit:** `0` · `1` · `130` (SIGINT)
 
-**Phase `status`:** `success` `failure` `skipped` `timed_out` `cancelled`
+## Environment
 
-**Skip `reason`:** `cli` `environment` `project_default` `not_configured` `previous_phase_failed` `dry_run` `cancelled`
+`BUILD_ROOT/env.sh` then `<project>/env.sh` (project wins). `BUILD_ROOT` required (`KEEPSAKE_SCRIPTS_ROOT` legacy alias).
 
-**Exit codes:** `0` success · `1` failure · `130` SIGINT cancelled
+## Cluster (deploy)
 
-## Environment resolution
+Allowlist is checked in the CLI. Image load runs inside `python|rust/deploy-k8s.sh` via `shared/detect-cluster.sh`:
 
-`BUILD_ROOT/env.sh` sourced first, then `<project>/env.sh`. Project vars override build-root vars. All resolved vars exported to child processes. `BUILD_ROOT` required (`KEEPSAKE_SCRIPTS_ROOT` accepted as legacy alias).
-
-## Cluster detection (deploy phase)
-
-| kubectl context | Strategy |
-|----------------|----------|
-| contains `kind` | `kind load docker-image` |
-| `rancher-desktop` | no load (shared daemon) |
-| `docker-desktop` | no load |
+| Context / cluster | Image load |
+|-------------------|------------|
+| name contains `kind` | `kind load docker-image` |
+| `rancher-desktop` or context `keepsake-dev` | none (shared daemon); allowlist key `rancher-desktop` |
+| `docker-desktop` | none |
 | `minikube` | `minikube image load` |
-| other | allowed if listed in `dpk-workspace.toml` allowlist |
+| other | allowed only if listed in workspace allowlist |
 
-## CI workflows
+## Documentation
 
-| Workflow | Trigger | What it checks |
-|----------|---------|----------------|
-| `shellcheck.yml` | PR/push | all `*.sh` via shellcheck v0.10.0 |
-| `rust-tests.yml` | PR/push | CLI unit + integration tests |
-| `security-audit.yml` | PR/push | dispatches to `dpk-audit`; skips docs-only PRs |
+- [Architecture](docs/architecture.md)
+- [Phases](docs/phases.md)
+- [Docs index](docs/README.md)
+
+## CI
+
+| Workflow | What |
+|----------|------|
+| `shellcheck.yml` | all `*.sh` (shellcheck v0.10.0) |
+| `rust-tests.yml` | `cargo fmt` / clippy / test; stdout ownership check |
+| `security-audit.yml` | dpk-ci → security-audit API; skips docs-only PRs |
