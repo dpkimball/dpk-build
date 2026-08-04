@@ -41,6 +41,8 @@ wait_for_resource_ready() {
   local job_name="$name"
   local tries=0
   local max_tries=5
+  local helm_sts=()
+  local helm_deploys=()
 
   if [[ "$name" == *prestart* ]]; then
     print_status "📦 (hint) '$name' looks like a prestart job — waiting for Job completion..."
@@ -101,7 +103,28 @@ wait_for_resource_ready() {
       fi
     fi
 
-    # 4) fallback to default namespace once if nothing found
+    # 4) Helm release: app.kubernetes.io/instance=<release> (Flink STS, multi-resource charts)
+    if [[ -z "$kind" ]]; then
+      helm_sts=()
+      helm_deploys=()
+      while IFS= read -r _n; do
+        [[ -n "$_n" ]] && helm_sts+=("$_n")
+      done < <(kubectl get sts --namespace "$ns" \
+        --selector="app.kubernetes.io/instance=${name}" \
+        -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)
+      while IFS= read -r _n; do
+        [[ -n "$_n" ]] && helm_deploys+=("$_n")
+      done < <(kubectl get deploy --namespace "$ns" \
+        --selector="app.kubernetes.io/instance=${name}" \
+        -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)
+      if [[ ${#helm_sts[@]} -gt 0 ]]; then
+        kind="HelmStatefulSet"
+      elif [[ ${#helm_deploys[@]} -gt 0 ]]; then
+        kind="HelmDeployment"
+      fi
+    fi
+
+    # 5) fallback to default namespace once if nothing found
     if [[ -z "$kind" && $tries -eq 0 ]]; then
       local def_job
       def_job=$(kubectl get job "$name" \
@@ -165,6 +188,31 @@ wait_for_resource_ready() {
       exit 1
     fi
     print_status "✅ Deployment $name is ready"
+  elif [[ "$kind" == "HelmStatefulSet" ]]; then
+    print_status "📦 Detected Helm StatefulSet(s) for release $name in ns=$ns — waiting..."
+    local sts
+    for sts in "${helm_sts[@]}"; do
+      [[ -z "$sts" ]] && continue
+      print_status "⏳ Waiting for statefulset/$sts..."
+      if ! kubectl rollout status "statefulset/$sts" --namespace "$ns" --timeout=300s; then
+        print_error "❌ StatefulSet $sts failed to become ready (ns=$ns)"
+        exit 1
+      fi
+    done
+    print_status "✅ Helm StatefulSet(s) for $name are ready"
+  elif [[ "$kind" == "HelmDeployment" ]]; then
+    print_status "📦 Detected Helm Deployment(s) for release $name in ns=$ns — waiting..."
+    local dep
+    for dep in "${helm_deploys[@]}"; do
+      [[ -z "$dep" ]] && continue
+      print_status "🔁 Restart + wait deployment/$dep..."
+      kubectl rollout restart "deployment/$dep" --namespace "$ns" >/dev/null 2>&1 || true
+      if ! kubectl rollout status "deployment/$dep" --namespace "$ns" --timeout=300s; then
+        print_error "❌ Deployment $dep failed to become ready (ns=$ns)"
+        exit 1
+      fi
+    done
+    print_status "✅ Helm Deployment(s) for $name are ready"
   else
     print_error "⚠️ Resource $name is of kind '$kind' which is not handled"
     exit 1

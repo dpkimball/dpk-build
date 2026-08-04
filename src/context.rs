@@ -8,6 +8,8 @@ pub enum Language {
     Python,
     Rust,
     Node,
+    /// Flink/Maven services: image + deploy via shared docker/helm scripts; lint/test/build skipped unless implemented.
+    Java,
 }
 
 impl Language {
@@ -16,6 +18,7 @@ impl Language {
             Language::Python => "python",
             Language::Rust => "rust",
             Language::Node => "node",
+            Language::Java => "java",
         }
     }
 }
@@ -60,9 +63,7 @@ pub fn detect_language(dir: &Path, override_lang: Option<&str>) -> Result<Langua
             "python" => Ok(Language::Python),
             "rust" => Ok(Language::Rust),
             "node" => Ok(Language::Node),
-            "java" => Err(DpkError::LanguageUnsupported {
-                name: "java".into(),
-            }),
+            "java" => Ok(Language::Java),
             other => Err(DpkError::LanguageUnsupported { name: other.into() }),
         };
     }
@@ -72,17 +73,13 @@ pub fn detect_language(dir: &Path, override_lang: Option<&str>) -> Result<Langua
         ("Cargo.toml", Language::Rust),
         ("pyproject.toml", Language::Python),
         ("package.json", Language::Node),
+        ("pom.xml", Language::Java),
+        ("build.gradle", Language::Java),
     ];
     for (file, lang) in &indicators {
         if dir.join(file).exists() {
             found.push((dir.join(file), *lang));
         }
-    }
-    // Check for Java (unsupported)
-    if dir.join("pom.xml").exists() || dir.join("build.gradle").exists() {
-        return Err(DpkError::LanguageUnsupported {
-            name: "java".into(),
-        });
     }
 
     match found.len() {

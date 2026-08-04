@@ -111,6 +111,36 @@ pub fn run(ctx: &RunContext, skips: &SkipFlags, cancelled: &Arc<AtomicBool>) -> 
             };
             PhaseResult::failure(0, ErrorInfo::from(&e))
         }
+        Language::Java => {
+            let pom = match crate::maven::resolve_pom(
+                &ctx.project_dir,
+                crate::maven::toml_maven_pom(&ctx.project_cfg).as_deref(),
+            ) {
+                Ok(p) => p,
+                Err(e) => {
+                    return PhaseResult::failure(0, ErrorInfo::from(&e));
+                }
+            };
+            match crate::maven::run_maven(crate::maven::MavenRun {
+                project_dir: &ctx.project_dir,
+                pom: &pom,
+                goals: &["validate", "compile"],
+                extra_args: &["-DskipTests"],
+                env_overrides: env,
+                timeout,
+                output_mode: ctx.output_mode,
+                cancelled,
+            }) {
+                Err(e) => {
+                    PhaseResult::failure(start.elapsed().as_millis() as u64, ErrorInfo::from(&e))
+                }
+                Ok(outcome) => {
+                    let mut r = outcome_to_result(outcome);
+                    r.duration_ms = start.elapsed().as_millis() as u64;
+                    r
+                }
+            }
+        }
     }
 }
 
@@ -142,6 +172,12 @@ pub(crate) fn base_env(ctx: &RunContext, skips: &SkipFlags) -> Vec<(OsString, Os
         if let Some(docker) = &cfg.docker {
             if let Some(n) = &docker.image_name {
                 set_or_update(&mut env, "IMAGE_NAME", OsString::from(n));
+            }
+            if let Some(d) = &docker.dockerfile {
+                set_or_update(&mut env, "DOCKERFILE", OsString::from(d));
+            }
+            if let Some(d) = &docker.dockerfile_dir {
+                set_or_update(&mut env, "DOCKERFILE_DIR", OsString::from(d));
             }
             if let Some(p) = &docker.platforms {
                 set_or_update(&mut env, "DOCKER_PLATFORMS", OsString::from(p.join(",")));

@@ -16,16 +16,15 @@ pub struct ProjectConfig {
 pub struct ProjectSection {
     pub name: Option<String>,
     pub language: Option<String>,
-    #[allow(dead_code)]
     pub version: Option<String>,
+    /// Optional path to the Maven POM relative to the project root (e.g. `jobs/pom.xml`).
+    pub maven_pom: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct DockerSection {
     pub image_name: Option<String>,
-    #[allow(dead_code)]
     pub dockerfile_dir: Option<String>,
-    #[allow(dead_code)]
     pub dockerfile: Option<String>,
     pub platforms: Option<Vec<String>>,
     /// Companion images built after the primary image.
@@ -95,12 +94,7 @@ impl ProjectConfig {
         if let Some(proj) = &self.project {
             if let Some(lang) = &proj.language {
                 match lang.as_str() {
-                    "python" | "rust" | "node" => {}
-                    "java" => {
-                        return Err(DpkError::LanguageUnsupported {
-                            name: "java".into(),
-                        })
-                    }
+                    "python" | "rust" | "node" | "java" => {}
                     other => return Err(DpkError::LanguageUnsupported { name: other.into() }),
                 }
             }
@@ -158,6 +152,8 @@ mod tests {
             r#"
 [docker]
 image_name = "security-audit-api"
+dockerfile = "Dockerfile.runtime"
+dockerfile_dir = "."
 extra_image_builds = ["security-audit-runner:containers/security-audit-runner/Dockerfile"]
 worker_image_name = "security-audit-runner"
 extra_args = "--build-context dpk2=../dpk2 --build-context bindb=../bindb"
@@ -166,6 +162,8 @@ extra_args = "--build-context dpk2=../dpk2 --build-context bindb=../bindb"
         .unwrap();
         let docker = cfg.docker.expect("docker section");
         assert_eq!(docker.image_name.as_deref(), Some("security-audit-api"));
+        assert_eq!(docker.dockerfile.as_deref(), Some("Dockerfile.runtime"));
+        assert_eq!(docker.dockerfile_dir.as_deref(), Some("."));
         assert_eq!(
             docker.extra_image_builds.as_ref().map(|v| v.join(",")),
             Some("security-audit-runner:containers/security-audit-runner/Dockerfile".to_string())
@@ -177,6 +175,28 @@ extra_args = "--build-context dpk2=../dpk2 --build-context bindb=../bindb"
         assert_eq!(
             docker.extra_args.as_deref(),
             Some("--build-context dpk2=../dpk2 --build-context bindb=../bindb")
+        );
+    }
+
+    #[test]
+    fn accepts_java_language() {
+        let cfg: ProjectConfig = toml::from_str(
+            r#"
+[project]
+name = "pdp"
+language = "java"
+maven_pom = "jobs/pom.xml"
+"#,
+        )
+        .unwrap();
+        cfg.validate().expect("java should be allowed");
+        assert_eq!(
+            cfg.project.as_ref().and_then(|p| p.language.as_deref()),
+            Some("java")
+        );
+        assert_eq!(
+            cfg.project.as_ref().and_then(|p| p.maven_pom.as_deref()),
+            Some("jobs/pom.xml")
         );
     }
 }

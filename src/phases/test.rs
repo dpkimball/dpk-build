@@ -75,5 +75,35 @@ pub fn run(ctx: &RunContext, skips: &SkipFlags, cancelled: &Arc<AtomicBool>) -> 
             };
             PhaseResult::failure(0, ErrorInfo::from(&e))
         }
+        Language::Java => {
+            let pom = match crate::maven::resolve_pom(
+                &ctx.project_dir,
+                crate::maven::toml_maven_pom(&ctx.project_cfg).as_deref(),
+            ) {
+                Ok(p) => p,
+                Err(e) => {
+                    return PhaseResult::failure(0, ErrorInfo::from(&e));
+                }
+            };
+            match crate::maven::run_maven(crate::maven::MavenRun {
+                project_dir: &ctx.project_dir,
+                pom: &pom,
+                goals: &["test"],
+                extra_args: &[],
+                env_overrides: env,
+                timeout,
+                output_mode: ctx.output_mode,
+                cancelled,
+            }) {
+                Err(e) => {
+                    PhaseResult::failure(start.elapsed().as_millis() as u64, ErrorInfo::from(&e))
+                }
+                Ok(outcome) => {
+                    let mut r = super::lint::outcome_to_result(outcome);
+                    r.duration_ms = start.elapsed().as_millis() as u64;
+                    r
+                }
+            }
+        }
     }
 }

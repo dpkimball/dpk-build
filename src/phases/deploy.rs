@@ -47,9 +47,10 @@ pub fn run(ctx: &RunContext, skips: &SkipFlags, cancelled: &Arc<AtomicBool>) -> 
 
     // Run deploy script
     let script = match ctx.language {
-        Language::Python => ctx.build_root.join("python/deploy-k8s.sh"),
+        Language::Python | Language::Java | Language::Node => {
+            ctx.build_root.join("python/deploy-k8s.sh")
+        }
         Language::Rust => ctx.build_root.join("rust/deploy-k8s.sh"),
-        Language::Node => ctx.build_root.join("python/deploy-k8s.sh"),
     };
 
     let timeout = ctx

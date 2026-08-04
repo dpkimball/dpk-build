@@ -19,7 +19,7 @@ pub fn run(ctx: &RunContext, skips: &SkipFlags, cancelled: &Arc<AtomicBool>) -> 
     }
 
     let script = match ctx.language {
-        Language::Python => ctx.build_root.join("python/build-docker.sh"),
+        Language::Python | Language::Java => ctx.build_root.join("python/build-docker.sh"),
         Language::Rust => ctx.build_root.join("rust/build-docker.sh"),
         Language::Node => {
             let e = crate::error::DpkError::OperationNotSupported {

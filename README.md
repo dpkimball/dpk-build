@@ -18,10 +18,22 @@ include $(BUILD_ROOT)/Makefile.common
 ```toml
 [project]
 name = "my-service"
-language = "python"   # python | rust | node
+language = "python"   # python | rust | node | java
 ```
 
-Language auto-detected if omitted: `Cargo.toml`→rust, `pyproject.toml`→python, `package.json`→node. Error if ambiguous.
+Language auto-detected if omitted: `Cargo.toml`→rust, `pyproject.toml`→python, `package.json`→node, `pom.xml`/`build.gradle`→java. Error if ambiguous.
+
+**Java / Flink:** lint/test/build run Maven against `pom.xml`, `jobs/pom.xml`, or `project.maven_pom` in `dpk.toml`:
+
+| Phase | Maven goals |
+|-------|-------------|
+| lint | `validate compile` (`-DskipTests`) |
+| test | `test` |
+| build | `package` (`-DskipTests`) |
+
+Maven runs via local `mvn` when on PATH; otherwise Docker (`MAVEN_IMAGE`, default `maven:3.9-eclipse-temurin-17`) with the project tree and `~/.m2` mounted (same pattern as PDP `make build-job`).
+
+Image/deploy use the shared docker/helm scripts (`[docker]` / `[deploy]`). Set `[skip] lint/tests/build = true` when `make b` should only ship a runtime image (job JARs via project helpers such as `make build-job`).
 
 ## `make b`
 
@@ -40,6 +52,7 @@ Phase stops pipeline on failure; subsequent phases get `reason: previous_phase_f
 [project]
 name = "my-service"           # optional; falls back to directory name
 language = "python"           # optional; auto-detected
+maven_pom = "jobs/pom.xml"    # java only; optional override (default pom.xml or jobs/pom.xml)
 
 [skip]                        # permanent defaults for `deliver` only
 lint   = false
@@ -50,6 +63,8 @@ deploy = false
 
 [docker]                      # required for image phase to run
 image_name = "my-service"
+dockerfile = "Dockerfile"     # optional; default Dockerfile (PDP uses Dockerfile.runtime)
+dockerfile_dir = "."          # optional build context
 platforms  = ["linux/amd64"]  # optional; multi-arch
 # Companion images (built after primary). Each entry: image_name:Dockerfile path
 extra_image_builds = ["my-runner:containers/my-runner/Dockerfile"]

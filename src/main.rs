@@ -7,6 +7,7 @@ mod env_resolver;
 mod error;
 mod executor;
 mod lock;
+mod maven;
 mod output;
 mod phases;
 mod pypi;

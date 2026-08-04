@@ -72,14 +72,29 @@ pub fn run(ctx: &RunContext, online: bool) -> OperationResult {
         Language::Python => vec![("uv", true), ("python3", false)],
         Language::Rust => vec![("cargo", true)],
         Language::Node => vec![("node", true), ("npm", false)],
+        Language::Java => {
+            // Prefer local mvn; dockerized Maven is the fallback (see maven::run_maven).
+            vec![("docker", true), ("helm", false), ("kubectl", false)]
+        }
     };
     for (tool, required) in &lang_tools {
-        // Update existing entry if present, or add new
         if let Some(entry) = checks.iter_mut().find(|c| c.name == *tool) {
             if *required && !entry.found {
                 all_required_found = false;
             }
-            entry.required = *required;
+            entry.required = *required || entry.required;
+        } else {
+            let found = which::which(tool).is_ok();
+            let path = which::which(tool).ok().map(|p| p.display().to_string());
+            if *required && !found {
+                all_required_found = false;
+            }
+            checks.push(ToolCheck {
+                name: tool.to_string(),
+                found,
+                path,
+                required: *required,
+            });
         }
     }
 

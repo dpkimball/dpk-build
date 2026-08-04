@@ -80,7 +80,19 @@ fn read_version(ctx: &RunContext) -> Result<String, DpkError> {
         Language::Python => read_python_version(&ctx.project_dir),
         Language::Rust => read_rust_version(&ctx.project_dir),
         Language::Node => read_node_version(&ctx.project_dir),
+        Language::Java => read_java_version(ctx),
     }
+}
+
+fn read_java_version(ctx: &RunContext) -> Result<String, DpkError> {
+    if let Some(cfg) = &ctx.project_cfg {
+        if let Some(proj) = &cfg.project {
+            if let Some(v) = &proj.version {
+                return Ok(v.clone());
+            }
+        }
+    }
+    Ok("0.0.0".into())
 }
 
 fn read_python_version(dir: &Path) -> Result<String, DpkError> {
@@ -172,6 +184,7 @@ fn do_bump(ctx: &RunContext) -> Result<(String, String), DpkError> {
         Language::Python => bump_python_version(&ctx.project_dir),
         Language::Rust => bump_rust_version(&ctx.project_dir),
         Language::Node => bump_node_version(&ctx.project_dir),
+        Language::Java => bump_java_version(&ctx.project_dir),
     }
 }
 
@@ -295,6 +308,38 @@ fn bump_node_version(dir: &Path) -> Result<(String, String), DpkError> {
         message: e.to_string(),
     })?;
     atomic_write(&path, (new_content + "\n").as_bytes())?;
+
+    Ok((old_version, new_version))
+}
+
+/// Bump `[project].version` in `dpk.toml` (Java/Flink services have no pyproject/Cargo version).
+fn bump_java_version(dir: &Path) -> Result<(String, String), DpkError> {
+    let path = dir.join("dpk.toml");
+    let content = std::fs::read_to_string(&path).map_err(|e| DpkError::ManifestParse {
+        path: path.clone(),
+        message: e.to_string(),
+    })?;
+
+    let mut doc: toml_edit::DocumentMut =
+        content
+            .parse()
+            .map_err(|e: toml_edit::TomlError| DpkError::ManifestParse {
+                path: path.clone(),
+                message: e.to_string(),
+            })?;
+
+    if doc.get("project").is_none() {
+        doc["project"] = toml_edit::Item::Table(toml_edit::Table::new());
+    }
+
+    let old_version = doc["project"]["version"]
+        .as_str()
+        .unwrap_or("0.0.0")
+        .to_string();
+    let new_version = increment_patch(&old_version)?;
+    doc["project"]["version"] = toml_edit::value(new_version.clone());
+
+    atomic_write(&path, doc.to_string().as_bytes())?;
 
     Ok((old_version, new_version))
 }
