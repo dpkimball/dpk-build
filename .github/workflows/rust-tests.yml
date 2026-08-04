@@ -20,7 +20,8 @@ on:
 
 jobs:
   rust:
-    runs-on: self-hosted
+    # Disjoint from Security Audit Wait (ci-wait) — see dpk-ci#211 / runner pools doc.
+    runs-on: product-ci
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4

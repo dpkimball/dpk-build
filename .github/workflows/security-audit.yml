@@ -1,11 +1,25 @@
 # Consumer workflow: thin call into dpk-ci security-audit-dispatch.
-# Scan execution lives in the Security Audit Kubernetes service (memoryai).
 # Generated from security-audit/workflows/templates/security-audit-pr.yml — prefer sync-pr-workflows.py.
 #
-# Required: vars.SECURITY_AUDIT_API_URL, secrets.SECURITY_AUDIT_API_KEY
+# Ownership:
+#   dpk-ci          — reusable HTTP client (POST /v1/audits; fire-and-forget)
+#   security-audit  — API + worker Jobs + Check Run / SARIF reporting
 #
-# PR audits wait until non-security-audit checks for the head SHA have passed
-# (or been skipped). Failed CI cancels the audit so runners are not wasted.
+# Required org/repo config:
+#   vars.SECURITY_AUDIT_API_URL
+#   secrets.SECURITY_AUDIT_API_KEY
+#
+# Runner pools (dpk-ci#211 — disjoint scheduling eligibility):
+#   Wait for CI (inside dispatch) → ci-wait
+#   Product CI                    → product-ci
+#   Thin audit client             → optional with.runner (prefer product-ci)
+# Every consumer needs an online runner labeled ci-wait.
+#
+# Prefer runner groups + labels where available.
+#
+# Do NOT paste inline dispatch/wait logic into app repos.
+# Do NOT sync this template over dpkimball/security-audit's own
+# .github/workflows/security-audit.yml (gate + local workflow_call there).
 
 name: Security Audit
 
@@ -31,105 +45,11 @@ permissions:
   checks: read
 
 jobs:
-  wait-for-ci:
-    name: Wait for CI
-    if: github.event_name == 'pull_request'
-    runs-on: self-hosted
-    timeout-minutes: 90
-    steps:
-      - name: Wait for non-audit checks to succeed
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          export PATH="${HOME}/.local/bin:${PATH}"
-
-          is_audit_check() {
-            local name="$1"
-            local lname
-            # Normalize spaces/underscores so case patterns need no spaces
-            # (bash case arms cannot contain unquoted spaces).
-            lname="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]' | tr ' _' '--')"
-            case "$lname" in
-              *security-audit*|*wait-for-ci*) return 0 ;;
-              *) return 1 ;;
-            esac
-          }
-
-          echo "Waiting for CI on ${REPO}@${HEAD_SHA} (excluding security-audit / wait-for-ci)"
-          deadline=$((SECONDS + 5400))
-          saw_relevant=0
-
-          while (( SECONDS < deadline )); do
-            # Check Runs API
-            JSON="$(gh api --paginate \
-              "repos/${REPO}/commits/${HEAD_SHA}/check-runs" \
-              --jq '[.check_runs[] | {name, status, conclusion}]' 2>/dev/null || echo '[]')"
-
-            pending=0
-            failed=0
-            relevant=0
-            while IFS=$'\t' read -r name status conclusion; do
-              [[ -z "${name}" ]] && continue
-              if is_audit_check "$name"; then
-                continue
-              fi
-              relevant=1
-              saw_relevant=1
-              st="$(printf '%s' "$status" | tr '[:upper:]' '[:lower:]')"
-              conc="$(printf '%s' "${conclusion:-}" | tr '[:upper:]' '[:lower:]')"
-              case "$st" in
-                queued|in_progress|waiting|requested|pending)
-                  pending=1
-                  echo "pending: ${name} (${st})"
-                  ;;
-                completed)
-                  case "$conc" in
-                    success|skipped|neutral) ;;
-                    *)
-                      echo "::error::CI check failed: ${name} conclusion=${conc}"
-                      failed=1
-                      ;;
-                  esac
-                  ;;
-              esac
-            done < <(printf '%s\n' "$JSON" | jq -r '.[] | [.name, .status, (.conclusion // "")] | @tsv')
-
-            if (( failed )); then
-              exit 1
-            fi
-
-            if (( relevant == 0 )); then
-              # CI may not have registered checks yet; keep waiting briefly.
-              if (( saw_relevant == 0 )) && (( SECONDS < 120 )); then
-                echo "No non-audit checks yet; waiting for CI to start..."
-                sleep 10
-                continue
-              fi
-              echo "No non-audit checks for this SHA (path filters may have skipped CI); proceeding."
-              exit 0
-            fi
-
-            if (( pending == 0 )); then
-              echo "All non-audit checks completed successfully."
-              exit 0
-            fi
-
-            sleep 15
-          done
-
-          echo "::error::Timed out waiting for CI checks to finish."
-          exit 1
-
   security-audit:
-    name: security-audit
-    needs: [wait-for-ci]
-    if: always() && (github.event_name != 'pull_request' || needs.wait-for-ci.result == 'success')
     uses: dpkimball/dpk-ci/.github/workflows/security-audit-dispatch.yml@master
     with:
       repository_name: dpk-build
       github_repository: dpkimball/dpk-build
       classification: low
+      runner: product-ci
     secrets: inherit

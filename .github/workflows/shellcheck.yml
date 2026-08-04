@@ -14,9 +14,8 @@ on:
 
 jobs:
   shellcheck:
-    # GitHub-hosted ubuntu-latest fails when account billing/spending limit blocks
-    # hosted minutes. Use the QA self-hosted runner (same pattern as sibling repos).
-    runs-on: self-hosted
+    # Disjoint from Security Audit Wait (ci-wait) — see dpk-ci#211 / runner pools doc.
+    runs-on: product-ci
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

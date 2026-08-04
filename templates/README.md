@@ -1,45 +1,35 @@
 # New project quickstart
 
-Copy both files to your project root:
+Aligned projects use a **lean Makefile** + **`dpk.toml`** (no project `env.sh`).
 
 ```bash
-cp $BUILD_ROOT/templates/Makefile   ./Makefile
-cp $BUILD_ROOT/templates/env.sh     ./env.sh
-chmod +x env.sh
+cp $BUILD_ROOT/templates/Makefile ./Makefile
+# Add dpk.toml for language, [docker], [deploy], [skip] — see README.md
 ```
 
-Then edit two things:
+Then edit the Makefile:
 
-**`Makefile`**
 - Set `BUILD_ROOT` depth (`../` for a top-level repo, `../../` for a sub-project)
 - Set `INTERNAL_PKGS` to the space-separated list of internal packages this project depends on (leave empty if none)
 
-**`env.sh`**
-- Set `IMAGE_NAME`, `HELM_RELEASE`, `HELM_CHART_PATH` (services) or leave `IMAGE_NAME=""` (libraries)
-- Delete the block that doesn't apply (service OR library)
-- Set `K8S_NAMESPACE="dagster"` if this is a Dagster code location
-
-That's it. `make b` runs the full build cycle.
+`make b` runs `dpk-build deliver` (full cycle locally; lint/test/build only when `CI=true`).
 
 ## Standard targets (from `Makefile.common`)
 
 | Target | What it does |
 |--------|-------------|
-| `make b` | Full cycle: update-versions → sync → lint → test → build → deploy |
-| `make test` | Run tests only |
-| `make lint` | Run linter only |
+| `make b` | Full cycle via `dpk-build deliver` |
+| `make test` | Run tests only (language dispatcher) |
+| `make lint` | Lint only |
 | `make clean` | Remove `.venv`, `dist/`, build artefacts |
 | `make update-versions` | Bump `INTERNAL_PKGS` to latest from local PyPI |
-| `make deploy-local` | Push wheel to local PyPI (libraries only) |
-| `make help` | List all available targets |
+| `make deploy-local` | Push wheel to local PyPI (libraries) |
+| `make help` | List available targets |
 
 ## Skipping phases
 
-Override any `SKIP_*` flag inline:
+Prefer `[skip]` in `dpk.toml`, or CLI flags / env documented in the main README:
 
 ```bash
-SKIP_TESTS=true make b        # skip tests this run
-SKIP_LINT=true  make b        # skip lint this run
+make b   # respects dpk.toml [skip] and CI=true image/deploy skip
 ```
-
-Permanent overrides belong in `env.sh`.

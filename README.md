@@ -72,7 +72,7 @@ worker_image_name  = "my-runner"   # Helm --set config.workerImage
 # Extra docker/buildx flags (BuildKit --build-context, etc.)
 extra_args = "--build-context sibling=../sibling"
 
-[deploy]                      # values passed as env to deploy-k8s.sh
+[deploy]                      # values passed as env to python|rust/deploy-k8s.sh
 helm_release   = "my-service" # mutually exclusive with helm_releases
 helm_releases  = ["a", "b"]   # multi-chart; do not set with helm_release
 k8s_namespace  = "dev"

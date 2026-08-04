@@ -22,10 +22,10 @@ fi
 
 if [[ "${SKIP_DOCKER_IMAGE:-false}" != "true" ]]; then
   log_info "🐳 Building Docker image..."
-  "$_SCRIPTS_DIR/../build-docker-image.sh"
+  "$_SCRIPTS_DIR/../python/build-docker.sh"
 fi
 
 if [[ "${SKIP_K8S_DEPLOY:-false}" != "true" && "${K8S_DEPLOY:-false}" = "true" ]]; then
   log_info "🚀 Deploying to Kubernetes..."
-  "$_SCRIPTS_DIR/../deploy-k8s.sh"
+  "$_SCRIPTS_DIR/../python/deploy-k8s.sh"
 fi

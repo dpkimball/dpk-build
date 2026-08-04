@@ -2,8 +2,9 @@
 set -euo pipefail
 
 # Load shared utilities
-source "$(dirname "$0")/common.sh"
-source "$(dirname "$0")/utils.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/../common.sh"
 
 # Load environment variables
 [ -f .env.build ] && source .env.build
@@ -26,7 +27,7 @@ fi
 # Check if Docker image exists
 if ! docker image inspect "$IMAGE_NAME:latest" >/dev/null 2>&1; then
   log_error "Docker image $IMAGE_NAME:latest not found. Please build it first with:"
-  log_error "  $BUILD_ROOT/rust_docker_build.sh"
+  log_error "  $BUILD_ROOT/rust/build-docker.sh"
   exit 1
 fi
 
