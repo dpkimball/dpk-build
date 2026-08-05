@@ -44,3 +44,14 @@ jobs:
             ! -path './templates/*' \
             | sort \
             | xargs shellcheck --severity=warning
+
+  paths-env-matrix:
+    # Behavioural gate for the canonical path/env contract (issue #39).
+    # Disjoint from Security Audit Wait (ci-wait) — see dpk-ci#211 / runner pools doc.
+    runs-on: product-ci
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: paths.sh / env.sh behaviour matrix
+        run: bash tests/shell/paths-env-matrix.sh

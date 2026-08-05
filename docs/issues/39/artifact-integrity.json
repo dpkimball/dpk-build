@@ -1,0 +1,284 @@
+{
+  "errors": [],
+  "evidence": {
+    "adversarial-plan-review.md": {
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 2,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 3,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 5,
+          "verdict": "approve"
+        },
+        {
+          "round": 6,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 7,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 8,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 9,
+          "verdict": "approve"
+        },
+        {
+          "round": 10,
+          "verdict": "approve"
+        },
+        {
+          "round": 11,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 12,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 13,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 14,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 15,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 16,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 17,
+          "verdict": "approve"
+        },
+        {
+          "round": 18,
+          "verdict": "approve"
+        }
+      ]
+    },
+    "adversarial-spec-review.md": {
+      "rounds": [
+        {
+          "round": 1,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 2,
+          "verdict": "approve"
+        },
+        {
+          "round": 4,
+          "verdict": "approve"
+        },
+        {
+          "round": 5,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 6,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 7,
+          "verdict": "approve"
+        },
+        {
+          "round": 8,
+          "verdict": "approve"
+        },
+        {
+          "round": 9,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 10,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 11,
+          "verdict": "approve"
+        },
+        {
+          "round": 12,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 13,
+          "verdict": "request_changes"
+        },
+        {
+          "round": 14,
+          "verdict": "approve"
+        },
+        {
+          "round": 15,
+          "verdict": "approve"
+        }
+      ]
+    },
+    "decision_baseline": {
+      "acceptance_criteria": [
+        {
+          "criterion": "Canonical path file exports SSD, PROJECT_ROOT (workspace), SCRIPTS_ROOT, COMPOSE_PROJECT_ROOT (no KEEPSAKE_ prefix on these)",
+          "evidence": [
+            "pr:https://github.com/dpkimball/dpk-build/pull/40",
+            "commit:ae80ca63dab8b862ccf8b9a6d7e79ca854b554e5",
+            "file:paths.sh"
+          ],
+          "rationale": "Merged PR #40 settled the canonical exports as SSD, WORKSPACE_ROOT and BUILD_ROOT; SCRIPTS_ROOT and COMPOSE_PROJECT_ROOT were dropped and PROJECT_ROOT is per-repo, not the workspace.",
+          "status": "superseded"
+        },
+        {
+          "criterion": "Default workspace dir is dpk-workspace, with optional discovery of the legacy folder only inside this one file",
+          "evidence": [
+            "file:paths.sh",
+            "commit:ae80ca63dab8b862ccf8b9a6d7e79ca854b554e5"
+          ],
+          "rationale": "paths.sh defaults to dpk-workspace, discovers keepsake-workspace only as a fallback, prefers dpk-workspace when both exist, and is the only file performing discovery.",
+          "status": "already_satisfied"
+        },
+        {
+          "criterion": "File renamed off keepsake-paths.sh (e.g. paths.sh)",
+          "evidence": [
+            "file:paths.sh",
+            "commit:ae80ca63dab8b862ccf8b9a6d7e79ca854b554e5"
+          ],
+          "rationale": "paths.sh is canonical on master and keepsake-paths.sh no longer exists.",
+          "status": "already_satisfied"
+        },
+        {
+          "criterion": "Template env.sh bootstraps via sibling ../dpk-build (no umbrella folder name)",
+          "evidence": [
+            "pr:https://github.com/dpkimball/dpk-build/pull/49",
+            "commit:8c8bd4cd6e0e80ed43a11accfbef944fa3077cb6",
+            "issue-comment:https://github.com/dpkimball/dpk-build/issues/39#issuecomment-5195265997",
+            "file:templates/README.md"
+          ],
+          "rationale": "Merged PR #49 deleted templates/env.sh as an obsolete keepsake-scripts-era artifact and moved onboarding to lean Makefile + dpk.toml; the user's Decision Integrity correction confirms it stays deleted without a new evidenced use case.",
+          "status": "superseded"
+        },
+        {
+          "criterion": "Internal dpk-build scripts/docs use the new names",
+          "evidence": [
+            "file:python/deploy-k8s.sh",
+            "file:rust/deploy-k8s.sh",
+            "file:README.md"
+          ],
+          "rationale": "Internal scripts consume WORKSPACE_ROOT and BUILD_ROOT; remaining legacy mentions are the documented read-only fallbacks.",
+          "status": "already_satisfied"
+        },
+        {
+          "criterion": "Old KEEPSAKE_* path names accepted as read fallbacks only during cutover",
+          "evidence": [
+            "file:paths.sh",
+            "file:src/context.rs"
+          ],
+          "rationale": "Legacy names are read only when the canonical variable is unset and are never re-exported; resolve_build_root honours KEEPSAKE_SCRIPTS_ROOT only when BUILD_ROOT is unset.",
+          "status": "already_satisfied"
+        }
+      ],
+      "base_ref": "master",
+      "base_sha": "58653db28366f81746419fedc311f5934564419a",
+      "issue": 39,
+      "schema_version": 1
+    },
+    "issue": {
+      "state": "OPEN",
+      "url": "https://github.com/dpkimball/dpk-build/issues/39"
+    },
+    "manifest": {
+      "claims": [
+        {
+          "source": "file:templates/README.md",
+          "statement": "templates/env.sh is absent and templates/ is identical to origin/master at pushed head 0d940ac, matching the merged PR #49 decision",
+          "status": "pass"
+        },
+        {
+          "source": "file:docs/issues/39/decision-baseline.md",
+          "statement": "The decision baseline maps all six filed criteria with resolvable evidence and no conflicts, and is committed on the PR branch at 0d940ac",
+          "status": "pass"
+        },
+        {
+          "source": "file:.github/workflows/shellcheck.yml",
+          "statement": "At pushed head 0d940ac the ShellCheck find scope matches master and the only workflow delta is the paths-env-matrix job, whose step name no longer mentions templates",
+          "status": "pass"
+        },
+        {
+          "source": "file:tests/shell/paths-env-matrix.sh",
+          "statement": "At pushed head 0d940ac the behaviour matrix contains 17 assertions covering paths.sh, root env.sh and tracked-shell-script repository shape, and none about a template",
+          "status": "pass"
+        },
+        {
+          "source": "file:tests/integration/resolve_build_root.rs",
+          "statement": "resolve_build_root precedence and legacy-alias selection are proven by discriminating integration tests; the legacy case fails when the legacy branch is removed, and no longer coincides with the debug CARGO_MANIFEST_DIR fallback",
+          "status": "pass"
+        },
+        {
+          "source": "file:docs/issues/39/adversarial-spec-review.md",
+          "statement": "Pre-correction adversarial approvals are marked void and the approving pair (spec rounds 14 and 15) is recorded after the VOID marker on the corrected spec",
+          "status": "pass"
+        },
+        {
+          "source": "file:docs/issues/39/adversarial-plan-review.md",
+          "statement": "The plan log likewise voids its pre-correction approvals and records a post-VOID approving pair (plan rounds 17 and 18)",
+          "status": "pass"
+        },
+        {
+          "source": "ci:paths-env-matrix",
+          "statement": "PR CI job paths-env-matrix passes on the pushed head",
+          "status": "pending"
+        },
+        {
+          "source": "ci:shellcheck",
+          "statement": "PR CI job shellcheck passes on the pushed head",
+          "status": "pending"
+        },
+        {
+          "source": "ci:rust",
+          "statement": "PR CI job rust passes on the pushed head, including the stdout ownership check",
+          "status": "pending"
+        },
+        {
+          "source": "ci:security-audit",
+          "statement": "The security-audit check passes on the pushed head",
+          "status": "pending"
+        }
+      ],
+      "issue": 39,
+      "schema_version": 1,
+      "stage": "pre-pr",
+      "tier": "high-risk"
+    },
+    "required_artifacts": [
+      "decision-baseline.md",
+      "spec.md",
+      "adversarial-spec-review.md",
+      "validation.md",
+      "plan.md",
+      "adversarial-plan-review.md"
+    ]
+  },
+  "issue": 39,
+  "schema_version": 1,
+  "stage": "pre-pr",
+  "tier": "high-risk",
+  "verdict": "pass",
+  "warnings": []
+}
