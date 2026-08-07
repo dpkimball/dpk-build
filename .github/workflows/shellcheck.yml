@@ -55,3 +55,13 @@ jobs:
 
       - name: paths.sh / env.sh behaviour matrix
         run: bash tests/shell/paths-env-matrix.sh
+
+  makefile-build-root-guard:
+    # Ambient BUILD_ROOT=project must not break template / Makefile.common (issue #55).
+    runs-on: product-ci
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Makefile BUILD_ROOT pollution guard
+        run: bash tests/shell/makefile-build-root-guard.sh

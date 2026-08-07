@@ -1,7 +1,9 @@
 SHELL := /bin/bash
 
-# BUILD_ROOT must be set before this file is included.
+# BUILD_ROOT must be set before this file is included (path to this dpk-build tree).
 # See templates/Makefile for the canonical project Makefile pattern.
+# Projects must use := with an abspath relative to their Makefile — not ?= —
+# so an ambient BUILD_ROOT=project-cwd cannot break the include.
 #
 # make b resolution order:
 #   1. dpk-build on PATH (CI runners with the binary pre-installed)
@@ -10,6 +12,10 @@ SHELL := /bin/bash
 # Behaviour:
 #   local (CI unset): full pipeline — lint → test → build → image → deploy → verify
 #   CI (CI=true):     lint → test → build only (image and deploy skipped)
+
+ifeq ($(wildcard $(BUILD_ROOT)/bootstrap.sh),)
+$(error BUILD_ROOT=$(BUILD_ROOT) is not a dpk-build tree (missing bootstrap.sh). Ambient BUILD_ROOT pollution? In the project Makefile use: BUILD_ROOT := $$(abspath $$(dir $$(lastword $$(MAKEFILE_LIST)))/../dpk-build))
+endif
 
 .PHONY: b b-legacy test lint clean update-versions deploy-local help
 

@@ -2,8 +2,10 @@
 # Project Makefile — copy this to your project root and customise two lines.
 # =============================================================================
 
-# Path to dpk-build (adjust depth: ../  ../../  ../../../  as needed)
-BUILD_ROOT ?= ../dpk-build
+# Path to dpk-build (adjust ../ depth if the project is nested deeper).
+# Use := (not ?=): ambient BUILD_ROOT is often the *project* cwd after
+# deliver/agent shells, which would make include look for ./Makefile.common.
+BUILD_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../dpk-build)
 
 # Space-separated internal packages to auto-update before each build.
 # Leave empty if this project has no internal dependencies.
