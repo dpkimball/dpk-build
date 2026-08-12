@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../env.sh"
-source "$SCRIPT_DIR/../common.sh"
+_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$_SCRIPTS_DIR/../env.sh"
+source "$_SCRIPTS_DIR/../common.sh"
 [ -f "$PWD/env.sh" ] && source "$PWD/env.sh"
 
 [ -f .env.build ] && source .env.build
@@ -15,6 +15,13 @@ CLEAN="${CLEAN:-false}"
 CLEANUP_OLD_IMAGES="${CLEANUP_OLD_IMAGES:-true}"
 
 print_status "🔍 Config: IMAGE_NAME=$IMAGE_NAME | CLEAN=$CLEAN"
+
+if [ "${DPK_IMAGE_SCRIPT_PROBE:-}" = "1" ]; then
+  printf 'probe_scripts_dir=%s\n' "$_SCRIPTS_DIR"
+  printf 'probe_image_name=%s\n' "$IMAGE_NAME"
+  printf 'probe_script=%s\n' "$_SCRIPTS_DIR/build-docker.sh"
+  exit 0
+fi
 
 if [ "$CLEAN" = true ]; then
   print_status "🧼 Cleaning previous Docker artifacts..."
@@ -199,7 +206,7 @@ if [ -n "${EXTRA_IMAGE_BUILDS:-}" ] && [ "${_DPK_EXTRA_IMAGE_NESTED:-}" != "1" ]
       export DOCKERFILE_DIR="${DOCKERFILE_DIR:-.}"
       # Reuse the same DATE_TAG so companion images share the build stamp.
       export DATE_TAG
-      "$SCRIPT_DIR/build-docker.sh"
+      "$_SCRIPTS_DIR/build-docker.sh"
     ) || {
       print_error "Failed to build extra image $_extra_name"
       exit 1

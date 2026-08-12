@@ -1,0 +1,11 @@
+[project]
+name = "fake-node"
+language = "node"
+
+[docker]
+image_name = "fake-node"
+
+[skip]
+lint = true
+tests = true
+build = true

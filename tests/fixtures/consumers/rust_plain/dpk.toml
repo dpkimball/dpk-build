@@ -1,0 +1,11 @@
+[project]
+name = "contract-rust"
+language = "rust"
+
+[docker]
+image_name = "contract-rust"
+
+[skip]
+lint = true
+tests = true
+build = true

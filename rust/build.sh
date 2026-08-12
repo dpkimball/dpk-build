@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../env.sh"
-source "$SCRIPT_DIR/../common.sh"
+_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$_SCRIPTS_DIR/../env.sh"
+source "$_SCRIPTS_DIR/../common.sh"
 [ -f "$PWD/env.sh" ] && source "$PWD/env.sh"
 
 log_info "🦀 Building Rust project..."
@@ -32,12 +32,12 @@ fi
 
 if [[ "${SKIP_CRATE:-false}" != "true" ]]; then
   log_info "📦 Building Rust crate..."
-  "$SCRIPT_DIR/build-crate.sh"
+  "$_SCRIPTS_DIR/build-crate.sh"
 fi
 
 if [[ "${SKIP_DOCKER_IMAGE:-false}" != "true" ]]; then
   log_info "🐳 Building Docker image..."
-  "$SCRIPT_DIR/build-docker.sh"
+  "$_SCRIPTS_DIR/build-docker.sh"
 fi
 
 log_success "✅ Rust build complete!"

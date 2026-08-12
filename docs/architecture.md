@@ -38,7 +38,7 @@ make b
 | Python | CLI (`uv` / pytest / `python/build-wheel.sh`) | `python/build-docker.sh` | `python/deploy-k8s.sh` |
 | Rust | CLI (`cargo clippy` / `test` / `build --release`) | `rust/build-docker.sh` | `rust/deploy-k8s.sh` |
 | Java | CLI → `maven.rs` | `python/build-docker.sh` | `python/deploy-k8s.sh` |
-| Node | **not supported** (fails the phase) | — | — |
+| Node | **not supported** (fails the phase; skip via `[skip]` / CLI) | `python/build-docker.sh` | `python/deploy-k8s.sh` |
 
 Deploy scripts call `shared/detect-cluster.sh` for Kind / minikube image load. The Rust allowlist check also treats kubectl context `keepsake-dev` like Rancher Desktop (shared daemon).
 
@@ -53,5 +53,11 @@ Deploy scripts call `shared/detect-cluster.sh` for Kind / minikube image load. T
 
 ## Tests
 
-- Unit: alongside modules under `src/`
-- Integration: `tests/integration/` (skip, lock, dry-run, doctor, JSON, etc.)
+- Unit: alongside modules under `src/` (language → image/deploy script matrix)
+- Integration: `tests/integration/` (skip, lock, dry-run, doctor, JSON, Node skip-lint deliver)
+- Shell (CI, no sibling checkout required):
+  - `tests/shell/paths-env-matrix.sh`
+  - `tests/shell/makefile-build-root-guard.sh`
+  - `tests/shell/script-dir-survives-project-env.sh`
+  - `tests/shell/consumer-contract.sh` — python / rust / java / node fixtures, including an `env.sh` that sets `SCRIPT_DIR`
+- Shell (local workspace only): `tests/shell/workspace-consumer-dry-run.sh` — walks sibling `dpk.toml` trees; **skips in GitHub CI**

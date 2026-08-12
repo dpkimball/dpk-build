@@ -1,0 +1,11 @@
+[project]
+name = "contract-python-clobber"
+language = "python"
+
+[docker]
+image_name = "contract-python-clobber"
+
+[skip]
+lint = true
+tests = true
+build = true

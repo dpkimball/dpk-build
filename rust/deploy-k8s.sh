@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../env.sh"
-source "$SCRIPT_DIR/../common.sh"
+_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$_SCRIPTS_DIR/../env.sh"
+source "$_SCRIPTS_DIR/../common.sh"
 [ -f "$PWD/env.sh" ] && source "$PWD/env.sh"
 
 IMAGE_NAME="${IMAGE_NAME:-memory-graph-service}"
@@ -10,7 +10,14 @@ K8S_NAMESPACE="${K8S_NAMESPACE:-dev}"
 
 log_step "🚀 Deploying Rust service to Kubernetes..."
 
-CLUSTER_TYPE="$("$SCRIPT_DIR/../shared/detect-cluster.sh")"
+CLUSTER_TYPE="$("$_SCRIPTS_DIR/../shared/detect-cluster.sh")"
+
+if [ "${DPK_SCRIPT_DIR_PROBE:-}" = "1" ]; then
+  printf 'probe_scripts_dir=%s\n' "$_SCRIPTS_DIR"
+  printf 'probe_cluster=%s\n' "$CLUSTER_TYPE"
+  printf 'probe_detect=%s\n' "$_SCRIPTS_DIR/../shared/detect-cluster.sh"
+  exit 0
+fi
 
 case "$CLUSTER_TYPE" in
   kind)

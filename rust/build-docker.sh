@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../env.sh"
-source "$SCRIPT_DIR/../common.sh"
+_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$_SCRIPTS_DIR/../env.sh"
+source "$_SCRIPTS_DIR/../common.sh"
 [ -f "$PWD/env.sh" ] && source "$PWD/env.sh"
 
 [ -f .env.build ] && source .env.build
@@ -22,6 +22,13 @@ CLEAN="${CLEAN:-false}"
 SKIP_TESTS="${SKIP_TESTS:-false}"
 
 log_info "🔍 Config: IMAGE_NAME=$IMAGE_NAME | CLEAN=$CLEAN | SKIP_TESTS=$SKIP_TESTS | CONTEXT=$DOCKER_BUILD_CONTEXT | PLATFORMS=${DOCKER_PLATFORMS:-host}"
+
+if [ "${DPK_IMAGE_SCRIPT_PROBE:-}" = "1" ]; then
+  printf 'probe_scripts_dir=%s\n' "$_SCRIPTS_DIR"
+  printf 'probe_image_name=%s\n' "$IMAGE_NAME"
+  printf 'probe_script=%s\n' "$_SCRIPTS_DIR/build-docker.sh"
+  exit 0
+fi
 
 if [[ ! -f "Cargo.toml" ]]; then
   log_error "Not in a Rust project directory (Cargo.toml not found)"
@@ -100,7 +107,7 @@ log_success "✅ Pushed to ${REMOTE_IMAGE} (latest, ${DATE_TAG})"
 
 if [ "${K8S_DEPLOY:-false}" = "true" ]; then
   log_info "🚀 Deploying to Kubernetes..."
-  "$SCRIPT_DIR/deploy-k8s.sh"
+  "$_SCRIPTS_DIR/deploy-k8s.sh"
 else
   log_info "💡 To deploy to Kubernetes, set K8S_DEPLOY=true"
 fi

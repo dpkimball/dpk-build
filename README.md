@@ -10,21 +10,23 @@ Shared build pipeline for DPK repos. Consumers include `Makefile.common` and add
 
 **`Makefile`:**
 ```makefile
-BUILD_ROOT ?= ../dpk-build
+BUILD_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../dpk-build)
 include $(BUILD_ROOT)/Makefile.common
 ```
+
+Use `:=` with an abspath, not `?=`. An ambient `BUILD_ROOT` (often the project cwd) would otherwise make `include` look for `./Makefile.common`.
 
 **`dpk.toml`:**
 ```toml
 [project]
 name = "my-service"
-language = "python"   # python | rust | java  (optional; auto-detected)
+language = "python"   # python | rust | java | node  (optional; auto-detected)
 ```
 
-Auto-detect: `Cargo.toml` → rust, `pyproject.toml` → python, `pom.xml` / `build.gradle` → java. Error if ambiguous. Set `project.language` or `BUILD_LANG` to override.
+Auto-detect: `Cargo.toml` → rust, `pyproject.toml` → python, `pom.xml` / `build.gradle` → java, `package.json` → node. Error if ambiguous. Set `project.language` or `BUILD_LANG` to override.
 
 **Supported languages:** python, rust, java.  
-**Node:** `package.json` may be detected, but deliver phases are not implemented (phase fails).
+**Node:** image and deploy use `python/build-docker.sh` and `python/deploy-k8s.sh`. Lint, test, and build phases are not implemented — skip them in `[skip]` or via `--skip-lint --skip-tests` (and `[skip] build = true` when the image build is the compile).
 
 ### Java / Flink
 
@@ -192,6 +194,6 @@ Allowlist is checked in the CLI. Image load runs inside `python|rust/deploy-k8s.
 
 | Workflow | What |
 |----------|------|
-| `shellcheck.yml` | all `*.sh` (shellcheck v0.10.0) |
+| `shellcheck.yml` | all `*.sh`; paths/env matrix; Makefile `BUILD_ROOT` guard; `_SCRIPTS_DIR` probe; **in-repo consumer contract** (python/rust/java/node image+deploy probes) |
 | `rust-tests.yml` | `cargo fmt` / clippy / test; stdout ownership check |
 | `security-audit.yml` | dpk-ci → security-audit API; skips docs-only PRs |

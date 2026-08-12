@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../env.sh"
-source "$SCRIPT_DIR/../common.sh"
+_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$_SCRIPTS_DIR/../env.sh"
+source "$_SCRIPTS_DIR/../common.sh"
 [ -f "$PWD/env.sh" ] && source "$PWD/env.sh"
 
 if [[ "${SKIP_TESTS:-false}" == "true" ]]; then

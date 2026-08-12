@@ -5,6 +5,7 @@ pub mod dry_run;
 pub mod early_failure;
 pub mod env_resolver;
 pub mod json_output;
+pub mod language_matrix;
 pub mod lock;
 pub mod resolve_build_root;
 pub mod skip_logic;

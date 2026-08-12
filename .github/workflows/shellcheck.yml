@@ -65,3 +65,19 @@ jobs:
 
       - name: Makefile BUILD_ROOT pollution guard
         run: bash tests/shell/makefile-build-root-guard.sh
+
+  script-dir-survives-project-env:
+    # Project env.sh must not clobber phase-script paths (consumer SCRIPT_DIR).
+    runs-on: product-ci
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: _SCRIPTS_DIR survives project env.sh
+        run: bash tests/shell/script-dir-survives-project-env.sh
+
+      - name: In-repo consumer contract (language × image/deploy)
+        run: bash tests/shell/consumer-contract.sh
+
+      - name: Workspace consumer dry-run (no-op unless dpk-workspace.toml is the parent)
+        run: bash tests/shell/workspace-consumer-dry-run.sh

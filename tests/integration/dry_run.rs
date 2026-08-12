@@ -65,3 +65,19 @@ fn test_dry_run_does_not_execute_scripts() {
     let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("valid JSON");
     assert_eq!(v["phases"]["lint"]["status"], "skipped");
 }
+
+#[test]
+fn test_dry_run_deliver_node_does_not_fail_language_unsupported() {
+    let dir = fixture_dir("fake_project_node");
+    let (stdout, stderr, code) = run_dpk(&dir, &["--dry-run", "deliver"]);
+    assert_eq!(code, 0, "stderr={stderr} stdout={stdout}");
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("must be valid JSON");
+    assert_eq!(v["status"], "success");
+    assert_eq!(v["phases"]["image"]["status"], "skipped");
+    assert_eq!(v["phases"]["image"]["reason"], "dry_run");
+    let err = v["phases"]["image"]["error"]["code"].as_str().unwrap_or("");
+    assert_ne!(
+        err, "language_unsupported_for_operation",
+        "node image must not fail as unsupported: {v}"
+    );
+}

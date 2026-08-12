@@ -37,9 +37,8 @@ Skipped with `not_configured` if `[docker]` is absent.
 
 | Language | Script |
 |----------|--------|
-| Python, Java | `python/build-docker.sh` |
+| Python, Java, Node | `python/build-docker.sh` |
 | Rust | `rust/build-docker.sh` |
-| Node | fails |
 
 `[docker]` fields map to env (`IMAGE_NAME`, `DOCKERFILE`, `EXTRA_IMAGE_BUILDS`, `WORKER_IMAGE_NAME`, `DOCKER_EXTRA_ARGS`, …).
 

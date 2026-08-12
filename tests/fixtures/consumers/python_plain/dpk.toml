@@ -1,0 +1,11 @@
+[project]
+name = "contract-python"
+language = "python"
+
+[docker]
+image_name = "contract-python"
+
+[skip]
+lint = true
+tests = true
+build = true

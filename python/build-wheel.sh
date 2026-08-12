@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../env.sh"
-source "$SCRIPT_DIR/../common.sh"
+_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$_SCRIPTS_DIR/../env.sh"
+source "$_SCRIPTS_DIR/../common.sh"
 [ -f "$PWD/env.sh" ] && source "$PWD/env.sh"
 
 # 🔧 Store PyPI settings for local development if set (don't export yet)
@@ -45,7 +45,7 @@ log_info "🔍 Package name: $PACKAGE_NAME"
 
 # 🔍 Get latest version from local PyPI
 log_info "🔍 Querying local PyPI for latest $PACKAGE_NAME version..."
-GET_VERSION_SCRIPT="$SCRIPT_DIR/../shared/get_latest_pypi_version.sh"
+GET_VERSION_SCRIPT="$_SCRIPTS_DIR/../shared/get_latest_pypi_version.sh"
 
 if [[ ! -x "$GET_VERSION_SCRIPT" ]]; then
   log_error "❌ Version script not found or not executable: $GET_VERSION_SCRIPT"

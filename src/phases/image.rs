@@ -18,17 +18,7 @@ pub fn run(ctx: &RunContext, skips: &SkipFlags, cancelled: &Arc<AtomicBool>) -> 
         return PhaseResult::skipped(SkipReason::NotConfigured);
     }
 
-    let script = match ctx.language {
-        Language::Python | Language::Java => ctx.build_root.join("python/build-docker.sh"),
-        Language::Rust => ctx.build_root.join("rust/build-docker.sh"),
-        Language::Node => {
-            let e = crate::error::DpkError::OperationNotSupported {
-                op: "image".into(),
-                language: "node".into(),
-            };
-            return PhaseResult::failure(0, ErrorInfo::from(&e));
-        }
-    };
+    let script = image_script(ctx.language, &ctx.build_root);
 
     let timeout = ctx
         .project_cfg
@@ -47,5 +37,34 @@ pub fn run(ctx: &RunContext, skips: &SkipFlags, cancelled: &Arc<AtomicBool>) -> 
     ) {
         Err(e) => PhaseResult::failure(0, ErrorInfo::from(&e)),
         Ok(outcome) => super::lint::outcome_to_result(outcome),
+    }
+}
+
+/// Node uses the same docker script as Python/Java: `python/build-docker.sh` is
+/// language-agnostic (Dockerfile + IMAGE_NAME + VITE_* build-args). The deleted
+/// root `build-docker-image.sh` was a two-line exec wrapper onto that script.
+fn image_script(language: Language, build_root: &std::path::Path) -> std::path::PathBuf {
+    match language {
+        Language::Python | Language::Java | Language::Node => {
+            build_root.join("python/build-docker.sh")
+        }
+        Language::Rust => build_root.join("rust/build-docker.sh"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn node_image_uses_python_docker_script() {
+        let root = PathBuf::from("/tmp/dpk-build");
+        let py = root.join("python/build-docker.sh");
+        let rs = root.join("rust/build-docker.sh");
+        assert_eq!(image_script(Language::Python, &root), py);
+        assert_eq!(image_script(Language::Java, &root), py);
+        assert_eq!(image_script(Language::Node, &root), py);
+        assert_eq!(image_script(Language::Rust, &root), rs);
     }
 }

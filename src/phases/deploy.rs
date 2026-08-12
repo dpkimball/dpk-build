@@ -46,12 +46,7 @@ pub fn run(ctx: &RunContext, skips: &SkipFlags, cancelled: &Arc<AtomicBool>) -> 
     }
 
     // Run deploy script
-    let script = match ctx.language {
-        Language::Python | Language::Java | Language::Node => {
-            ctx.build_root.join("python/deploy-k8s.sh")
-        }
-        Language::Rust => ctx.build_root.join("rust/deploy-k8s.sh"),
-    };
+    let script = deploy_script(ctx.language, &ctx.build_root);
 
     let timeout = ctx
         .project_cfg
@@ -70,5 +65,31 @@ pub fn run(ctx: &RunContext, skips: &SkipFlags, cancelled: &Arc<AtomicBool>) -> 
     ) {
         Err(e) => PhaseResult::failure(0, ErrorInfo::from(&e)),
         Ok(outcome) => super::lint::outcome_to_result(outcome),
+    }
+}
+
+fn deploy_script(language: Language, build_root: &std::path::Path) -> std::path::PathBuf {
+    match language {
+        Language::Python | Language::Java | Language::Node => {
+            build_root.join("python/deploy-k8s.sh")
+        }
+        Language::Rust => build_root.join("rust/deploy-k8s.sh"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn deploy_script_language_matrix() {
+        let root = PathBuf::from("/tmp/dpk-build");
+        let py = root.join("python/deploy-k8s.sh");
+        let rs = root.join("rust/deploy-k8s.sh");
+        assert_eq!(deploy_script(Language::Python, &root), py);
+        assert_eq!(deploy_script(Language::Java, &root), py);
+        assert_eq!(deploy_script(Language::Node, &root), py);
+        assert_eq!(deploy_script(Language::Rust, &root), rs);
     }
 }
