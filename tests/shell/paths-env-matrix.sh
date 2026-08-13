@@ -58,7 +58,7 @@ new_tmpdir() {
 # --- paths.sh: defaults -------------------------------------------------------
 
 read -r ssd workspace build_root <<<"$(probe_paths)"
-assert_eq "paths/default_ssd_constant" "/Volumes/KeepsakeSSD" "$ssd"
+assert_eq "paths/default_ssd_constant" "/Volumes/SSD" "$ssd"
 
 empty_ssd="$(new_tmpdir)"
 read -r ssd workspace build_root <<<"$(probe_paths SSD="$empty_ssd")"

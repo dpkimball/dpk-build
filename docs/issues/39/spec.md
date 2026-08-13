@@ -45,7 +45,7 @@ The contract itself is unchanged by this PR; the diagram is what CI now pins.
 
 ```text
 paths.sh   ──exports──►  SSD  →  WORKSPACE_ROOT  →  BUILD_ROOT
-   │                     defaults: /Volumes/KeepsakeSSD, <SSD>/dpk-workspace,
+   │                     defaults: /Volumes/SSD, <SSD>/dpk-workspace,
    │                               <WORKSPACE_ROOT>/dpk-build
    │  reads (only when the canonical variable is unset, never re-exports):
    └─ KEEPSAKE_SSD, KEEPSAKE_PROJECT_ROOT, KEEPSAKE_SCRIPTS_ROOT

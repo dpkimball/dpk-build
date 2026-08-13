@@ -15,7 +15,7 @@
 # =============================================================================
 
 # Accept legacy KEEPSAKE_* only as input fallbacks during cutover.
-export SSD="${SSD:-${KEEPSAKE_SSD:-/Volumes/KeepsakeSSD}}"
+export SSD="${SSD:-${KEEPSAKE_SSD:-/Volumes/SSD}}"
 
 if [ -z "${WORKSPACE_ROOT:-}" ] && [ -z "${KEEPSAKE_PROJECT_ROOT:-}" ]; then
   if [ -d "${SSD}/dpk-workspace" ]; then
