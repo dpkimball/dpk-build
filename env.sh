@@ -23,7 +23,7 @@ unset _SCRIPT_DIR
 # =============================================================================
 # Service Ports (DEV environment - shared across all projects)
 # =============================================================================
-# These match the NodePorts in keepsake-dev Kubernetes cluster
+# These match the NodePorts in dev Kubernetes cluster
 # Backend uses 31325 to match QA for consistency
 export KEEPSAKE_BACKEND_PORT="${KEEPSAKE_BACKEND_PORT:-31325}"
 export KEEPSAKE_FRONTEND_PORT="${KEEPSAKE_FRONTEND_PORT:-30004}"

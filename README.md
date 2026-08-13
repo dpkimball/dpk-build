@@ -179,7 +179,7 @@ Allowlist is checked in the CLI. Image load runs inside `python|rust/deploy-k8s.
 | Context / cluster | Image load |
 |-------------------|------------|
 | name contains `kind` | `kind load docker-image` |
-| `rancher-desktop` or context `keepsake-dev` | none (shared daemon); allowlist key `rancher-desktop` |
+| `rancher-desktop` or context `dev` | none (shared daemon); allowlist key `rancher-desktop` |
 | `docker-desktop` | none |
 | `minikube` | `minikube image load` |
 | other | allowed only if listed in workspace allowlist |

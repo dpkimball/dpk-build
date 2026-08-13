@@ -21,7 +21,7 @@ fi
 case "$CLUSTER_TYPE" in
   kind)
     log_info "🐳 Loading image into Kind cluster..."
-    kind load docker-image "$IMAGE_NAME:latest" --name "${KIND_CLUSTER:-keepsake-dev}"
+    kind load docker-image "$IMAGE_NAME:latest" --name "${KIND_CLUSTER:-dev}"
     ;;
   rancher-desktop)
     log_info "🐳 Using Rancher Desktop (image already available)"

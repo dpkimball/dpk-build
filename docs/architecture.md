@@ -40,7 +40,7 @@ make b
 | Java | CLI → `maven.rs` | `python/build-docker.sh` | `python/deploy-k8s.sh` |
 | Node | **not supported** (fails the phase; skip via `[skip]` / CLI) | `python/build-docker.sh` | `python/deploy-k8s.sh` |
 
-Deploy scripts call `shared/detect-cluster.sh` for Kind / minikube image load. The Rust allowlist check also treats kubectl context `keepsake-dev` like Rancher Desktop (shared daemon).
+Deploy scripts call `shared/detect-cluster.sh` for Kind / minikube image load. The Rust allowlist check also treats kubectl context `dev` like Rancher Desktop (shared daemon).
 
 ## Config files
 
