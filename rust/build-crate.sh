@@ -66,16 +66,31 @@ cp "$CRATE_FILE" "$DIST_DIR/"
 
 log_info "📁 Crate copied to: $DIST_DIR/$(basename "$CRATE_FILE")"
 
-# 🚀 Optionally publish to crates.io (if configured)
+# 🚀 Optionally publish to the private Cargo registry (Kellnr), never crates.io
 if [[ "${PUBLISH_CRATE:-false}" == "true" ]]; then
-  log_info "📤 Publishing to crates.io..."
-  cargo publish --allow-dirty || {
-    log_error "❌ Publish failed"
+  "$_SCRIPTS_DIR/cargo-publish-registry.sh" >/dev/null || {
+    log_error "❌ Publish refused (set CARGO_REGISTRY=dpk; crates.io is blocked)"
     exit 1
   }
-  log_info "✅ Publish complete for $PACKAGE_NAME@$CURRENT_VERSION"
+  log_info "📤 Publishing to Cargo registry ${CARGO_REGISTRY}..."
+  set +e
+  PUBLISH_OUTPUT=$(cargo publish --registry "${CARGO_REGISTRY}" --allow-dirty 2>&1)
+  PUBLISH_EXIT=$?
+  set -e
+  if [[ $PUBLISH_EXIT -ne 0 ]]; then
+    if echo "$PUBLISH_OUTPUT" | grep -qiE 'already exists|previously uploaded|duplicate version'; then
+      log_info "⚠️  $PACKAGE_NAME@$CURRENT_VERSION already on registry ${CARGO_REGISTRY}, skipping (this is OK)"
+    else
+      echo "$PUBLISH_OUTPUT" >&2
+      log_error "❌ Publish failed"
+      exit 1
+    fi
+  else
+    echo "$PUBLISH_OUTPUT"
+    log_info "✅ Publish complete for $PACKAGE_NAME@$CURRENT_VERSION"
+  fi
 else
-  log_info "💡 To publish to crates.io, set PUBLISH_CRATE=true"
+  log_info "💡 To publish to Kellnr registry dpk, set PUBLISH_CRATE=true CARGO_REGISTRY=dpk"
 fi
 
 log_info "🕓 Finished at $(date)"

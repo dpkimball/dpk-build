@@ -134,6 +134,7 @@ fn run_online_checks(_ctx: &RunContext) -> Vec<OnlineCheck> {
     // Check build root reachability via env
     let endpoints: Vec<(&str, &str)> = vec![
         ("local-pypi", "http://localhost:31126"),
+        ("local-kellnr", "http://localhost:31127/api/v1/health"),
         ("local-registry", "http://localhost:30500"),
     ];
 

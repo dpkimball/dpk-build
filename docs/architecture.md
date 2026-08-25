@@ -60,4 +60,5 @@ Deploy scripts call `shared/detect-cluster.sh` for Kind / minikube image load. T
   - `tests/shell/makefile-build-root-guard.sh`
   - `tests/shell/script-dir-survives-project-env.sh`
   - `tests/shell/consumer-contract.sh` — python / rust / java / node fixtures, including an `env.sh` that sets `SCRIPT_DIR`
+  - `tests/shell/build-crate-registry.sh` — `PUBLISH_CRATE` refuses crates.io; requires `CARGO_REGISTRY=dpk`
 - Shell (local workspace only): `tests/shell/workspace-consumer-dry-run.sh` — walks sibling `dpk.toml` trees; **skips in GitHub CI**

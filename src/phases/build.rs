@@ -47,7 +47,7 @@ pub fn run(ctx: &RunContext, skips: &SkipFlags, cancelled: &Arc<AtomicBool>) -> 
                     .map(OsString::from)
                     .collect(),
                 cwd: ctx.project_dir.clone(),
-                env_overrides: env,
+                env_overrides: env.clone(),
                 timeout,
                 output_mode: ctx.output_mode,
             };
@@ -58,7 +58,31 @@ pub fn run(ctx: &RunContext, skips: &SkipFlags, cancelled: &Arc<AtomicBool>) -> 
                 Ok(outcome) => {
                     let mut r = super::lint::outcome_to_result(outcome);
                     r.duration_ms = start.elapsed().as_millis() as u64;
-                    r
+                    if r.is_terminal() || !publish_crate_requested(&env) {
+                        return r;
+                    }
+                    // Library analog of python/build-wheel.sh twine upload: opt-in via
+                    // PUBLISH_CRATE=true CARGO_REGISTRY=dpk (never crates.io).
+                    let script = ctx.build_root.join("rust/build-crate.sh");
+                    match run_legacy_script(
+                        &script,
+                        &[],
+                        &ctx.project_dir,
+                        &env,
+                        timeout,
+                        ctx.output_mode,
+                        cancelled,
+                    ) {
+                        Err(e) => PhaseResult::failure(
+                            start.elapsed().as_millis() as u64,
+                            ErrorInfo::from(&e),
+                        ),
+                        Ok(pub_outcome) => {
+                            let mut pr = super::lint::outcome_to_result(pub_outcome);
+                            pr.duration_ms = start.elapsed().as_millis() as u64;
+                            pr
+                        }
+                    }
                 }
             }
         }
@@ -99,5 +123,42 @@ pub fn run(ctx: &RunContext, skips: &SkipFlags, cancelled: &Arc<AtomicBool>) -> 
                 }
             }
         }
+    }
+}
+
+fn env_value<'a>(env: &'a [(OsString, OsString)], key: &str) -> Option<&'a OsString> {
+    env.iter().find(|(k, _)| k == key).map(|(_, v)| v)
+}
+
+fn publish_crate_requested(env: &[(OsString, OsString)]) -> bool {
+    let flag = env_value(env, "PUBLISH_CRATE")
+        .map(|v| v == "true" || v == "1" || v == "TRUE")
+        .unwrap_or(false);
+    if !flag {
+        return false;
+    }
+    env_value(env, "CARGO_REGISTRY").is_some_and(|v| v == "dpk")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn pair(k: &str, v: &str) -> (OsString, OsString) {
+        (OsString::from(k), OsString::from(v))
+    }
+
+    #[test]
+    fn publish_requires_flag_and_dpk_registry() {
+        assert!(!publish_crate_requested(&[]));
+        assert!(!publish_crate_requested(&[pair("PUBLISH_CRATE", "true")]));
+        assert!(!publish_crate_requested(&[
+            pair("PUBLISH_CRATE", "true"),
+            pair("CARGO_REGISTRY", "crates-io"),
+        ]));
+        assert!(publish_crate_requested(&[
+            pair("PUBLISH_CRATE", "true"),
+            pair("CARGO_REGISTRY", "dpk"),
+        ]));
     }
 }

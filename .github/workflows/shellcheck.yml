@@ -81,3 +81,6 @@ jobs:
 
       - name: Workspace consumer dry-run (no-op unless dpk-workspace.toml is the parent)
         run: bash tests/shell/workspace-consumer-dry-run.sh
+
+      - name: Cargo publish uses Kellnr registry dpk (never crates.io)
+        run: bash tests/shell/build-crate-registry.sh

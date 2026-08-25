@@ -29,6 +29,7 @@ export KEEPSAKE_BACKEND_PORT="${KEEPSAKE_BACKEND_PORT:-31325}"
 export KEEPSAKE_FRONTEND_PORT="${KEEPSAKE_FRONTEND_PORT:-30004}"
 export KEEPSAKE_DAGSTER_PORT="${KEEPSAKE_DAGSTER_PORT:-30005}"
 export KEEPSAKE_PYPI_PORT="${KEEPSAKE_PYPI_PORT:-31126}"
+export KEEPSAKE_CARGO_PORT="${KEEPSAKE_CARGO_PORT:-31127}"
 export DPK_PORT="${DPK_PORT:-31605}"
 export KEEPSAKE_MONGO_PORT="${KEEPSAKE_MONGO_PORT:-32643}"
 export KEEPSAKE_LANGGRAPH_PORT="${KEEPSAKE_LANGGRAPH_PORT:-30080}"
@@ -69,6 +70,13 @@ export PYPI_PORT="${KEEPSAKE_PYPI_PORT}"
 export PYPI_USERNAME="${PYPI_USERNAME:-admin}"
 export PYPI_PASSWORD="${PYPI_PASSWORD:-your-secret-password}"
 export PYPI_URL="http://${PYPI_HOST}:${PYPI_PORT}"
+
+# =============================================================================
+# Kellnr Cargo registry (shared). Do not set PUBLISH_CRATE here — that is
+# opt-in per crate (see bindb/env.sh). Never set Cargo default registry.
+# =============================================================================
+export CARGO_REGISTRIES_DPK_INDEX="${CARGO_REGISTRIES_DPK_INDEX:-sparse+http://127.0.0.1:${KEEPSAKE_CARGO_PORT}/api/v1/crates/}"
+# Token: CARGO_REGISTRIES_DPK_TOKEN or ~/.cargo/credentials.toml — never commit it.
 
 # =============================================================================
 # UV Index URLs (shared across all projects)
