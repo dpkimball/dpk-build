@@ -72,11 +72,19 @@ export PYPI_PASSWORD="${PYPI_PASSWORD:-your-secret-password}"
 export PYPI_URL="http://${PYPI_HOST}:${PYPI_PORT}"
 
 # =============================================================================
-# Kellnr Cargo registry (shared). Do not set PUBLISH_CRATE here — that is
-# opt-in per crate (see bindb/env.sh). Never set Cargo default registry.
+# Kellnr Cargo registry (shared). Same pattern as PyPI:
+#   local make b → localhost + KEEPSAKE_CARGO_PORT (DEV NodePort)
+#   CI → secrets.PRIVATE_CARGO_URL (analog of PRIVATE_PYPI_URL)
+# Never set Cargo [registry] default. Never put host:port in workflow YAML.
 # =============================================================================
-export CARGO_REGISTRIES_DPK_INDEX="${CARGO_REGISTRIES_DPK_INDEX:-sparse+http://127.0.0.1:${KEEPSAKE_CARGO_PORT}/api/v1/crates/}"
+export CARGO_HOST="${CARGO_HOST:-localhost}"
+export CARGO_PORT="${KEEPSAKE_CARGO_PORT}"
+export CARGO_REGISTRIES_DPK_INDEX="${CARGO_REGISTRIES_DPK_INDEX:-sparse+http://${CARGO_HOST}:${CARGO_PORT}/api/v1/crates/}"
 # Token: CARGO_REGISTRIES_DPK_TOKEN or ~/.cargo/credentials.toml — never commit it.
+if [ -z "${CI:-}" ]; then
+  export PUBLISH_CRATE="${PUBLISH_CRATE:-true}"
+  export CARGO_REGISTRY="${CARGO_REGISTRY:-dpk}"
+fi
 
 # =============================================================================
 # UV Index URLs (shared across all projects)

@@ -14,7 +14,7 @@ if [[ ! -x "$HELPER" ]]; then
   chmod +x "$HELPER"
 fi
 
-out="$(PUBLISH_CRATE=true "$HELPER" 2>/tmp/cpr.err || true)"
+out="$(env -u CARGO_REGISTRY PUBLISH_CRATE=true "$HELPER" 2>/tmp/cpr.err || true)"
 if [[ -s /tmp/cpr.err ]] && grep -q 'CARGO_REGISTRY' /tmp/cpr.err; then
   pass "missing-registry-refused"
 else
@@ -55,6 +55,27 @@ if grep -q 'cargo-publish-registry.sh' "$REPO_ROOT/rust/build-crate.sh"; then
   pass "build-crate-uses-helper"
 else
   fail "build-crate-uses-helper" "build-crate.sh does not call cargo-publish-registry.sh"
+fi
+
+# Local make b (CI unset) must default to Kellnr, like Python → pypiserver.
+got="$(env -u PUBLISH_CRATE -u CARGO_REGISTRY -u CI bash -c "set -a; source '$REPO_ROOT/env.sh'; set +a; printf '%s %s' \"\$PUBLISH_CRATE\" \"\$CARGO_REGISTRY\"")"
+if [[ "$got" == "true dpk" ]]; then
+  pass "env-sh-local-defaults-dpk"
+else
+  fail "env-sh-local-defaults-dpk" "got: $got"
+fi
+got_ci="$(env -u PUBLISH_CRATE CI=true bash -c "set -a; source '$REPO_ROOT/env.sh'; set +a; printf '%s' \"\${PUBLISH_CRATE-}\"")"
+if [[ -z "$got_ci" ]]; then
+  pass "env-sh-ci-does-not-default-publish"
+else
+  fail "env-sh-ci-does-not-default-publish" "CI=true still set PUBLISH_CRATE=$got_ci"
+fi
+
+idx="$(env -u CARGO_REGISTRIES_DPK_INDEX -u CARGO_HOST bash -c "set -a; source '$REPO_ROOT/env.sh'; set +a; printf '%s' \"\$CARGO_REGISTRIES_DPK_INDEX\"")"
+if [[ "$idx" == sparse+http://localhost:*/api/v1/crates/ ]] && [[ "$idx" != *192.168* ]]; then
+  pass "env-sh-index-localhost-not-lan-ip"
+else
+  fail "env-sh-index-localhost-not-lan-ip" "got: $idx"
 fi
 
 printf '%s passed, %s failed\n' "$PASSED" "$FAILED"

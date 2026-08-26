@@ -7,88 +7,131 @@ source "$_SCRIPTS_DIR/../common.sh"
 
 log_info "📦 Building Rust crate..."
 
-# 📁 Required paths
 PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
 CARGO_TOML="${CARGO_TOML:-$PROJECT_ROOT/Cargo.toml}"
 TARGET_DIR="${TARGET_DIR:-$PROJECT_ROOT/target}"
+DIST_DIR="${DIST_DIR:-$PROJECT_ROOT/dist}"
 
-# Check if we're in a Rust project
 if [[ ! -f "$CARGO_TOML" ]]; then
   log_error "❌ Not in a Rust project directory (Cargo.toml not found)"
   exit 1
 fi
 
 log_info "📁 Working from: $PROJECT_ROOT"
-
-# 🔍 Extract package name from Cargo.toml
-PACKAGE_LINE=$(grep -E '^\s*name\s*=' "$CARGO_TOML" | head -n1)
-PACKAGE_NAME=$(echo "$PACKAGE_LINE" | awk -F '=' '{gsub(/"/, "", $2); gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}')
-
-if [[ -z "$PACKAGE_NAME" ]]; then
-  log_error "❌ Could not extract package name from $CARGO_TOML"
-  exit 1
-fi
-
-log_info "🔍 Package name: $PACKAGE_NAME"
-
-# 🔍 Get current version from Cargo.toml
-VERSION_LINE=$(grep -E '^\s*version\s*=' "$CARGO_TOML" | head -n1)
-CURRENT_VERSION=$(echo "$VERSION_LINE" | awk -F '=' '{gsub(/"/, "", $2); gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}')
-
-if [[ -z "$CURRENT_VERSION" ]]; then
-  log_error "❌ Could not extract version from $CARGO_TOML"
-  exit 1
-fi
-
-log_info "🔢 Current version: $CURRENT_VERSION"
-
-# 🧹 Clean old builds
-log_info "🧹 Cleaning old artifacts..."
-rm -rf "$TARGET_DIR/package" "$TARGET_DIR/dist"
-
-# 🛠️ Build crate package
-log_info "📦 Building crate package with cargo..."
-cargo package --allow-dirty
-
-# ✅ Confirm output
-CRATE_FILE=$(find "$TARGET_DIR/package" -name "${PACKAGE_NAME}-${CURRENT_VERSION}.crate" | head -n1)
-if [[ -z "$CRATE_FILE" ]]; then
-  log_error "❌ No .crate file found for package '$PACKAGE_NAME'"
-  exit 1
-fi
-
-log_info "✅ Built: $(basename "$CRATE_FILE")"
-
-# 📁 Create dist directory and copy crate
-DIST_DIR="${DIST_DIR:-$PROJECT_ROOT/dist}"
 mkdir -p "$DIST_DIR"
-cp "$CRATE_FILE" "$DIST_DIR/"
 
-log_info "📁 Crate copied to: $DIST_DIR/$(basename "$CRATE_FILE")"
+list_packages() {
+  python3 - "$PROJECT_ROOT" <<'PY'
+import json, subprocess, sys
+root = sys.argv[1]
+meta = json.loads(
+    subprocess.check_output(
+        ["cargo", "metadata", "--format-version", "1", "--no-deps"],
+        cwd=root,
+        text=True,
+    )
+)
+ids = set(meta["workspace_members"])
+for p in meta["packages"]:
+    if p["id"] not in ids:
+        continue
+    # Cargo: publish = false → empty list. Skip those (e.g. xtask).
+    if p.get("publish") == []:
+        continue
+    print(p["name"])
+PY
+}
 
-# 🚀 Optionally publish to the private Cargo registry (Kellnr), never crates.io
+publish_one() {
+  local name="$1"
+  log_info "📤 Publishing ${name} to Cargo registry ${CARGO_REGISTRY}..."
+  set +e
+  local output status
+  output=$(cargo publish -p "$name" --registry "${CARGO_REGISTRY}" --allow-dirty 2>&1)
+  status=$?
+  set -e
+  if [[ $status -eq 0 ]]; then
+    echo "$output"
+    log_info "✅ Publish complete for ${name}"
+    return 0
+  fi
+  if echo "$output" | grep -qiE 'already exists|previously uploaded|duplicate version'; then
+    log_info "⚠️  ${name} already on registry ${CARGO_REGISTRY}, skipping (this is OK)"
+    return 0
+  fi
+  if echo "$output" | grep -qiE 'path dependenc'; then
+    log_info "⚠️  skip Kellnr publish for ${name}: path deps remain (use registry = \"dpk\")"
+    return 0
+  fi
+  echo "$output" >&2
+  log_error "❌ Publish failed for ${name}"
+  return 1
+}
+
+package_one() {
+  local name="$1"
+  log_info "📦 Packaging ${name}..."
+  set +e
+  local output status
+  output=$(cargo package -p "$name" --allow-dirty --no-verify 2>&1)
+  status=$?
+  set -e
+  if [[ $status -ne 0 ]]; then
+    if echo "$output" | grep -qiE 'path dependenc'; then
+      log_info "⚠️  skip package ${name}: path deps remain (use registry = \"dpk\")"
+      return 0
+    fi
+    echo "$output" >&2
+    log_error "❌ Package failed for ${name}"
+    return 1
+  fi
+  echo "$output"
+  local crate_file
+  crate_file=$(find "$TARGET_DIR/package" -name "${name}-*.crate" | head -n1 || true)
+  if [[ -n "$crate_file" ]]; then
+    cp "$crate_file" "$DIST_DIR/"
+    log_info "✅ Built: $(basename "$crate_file")"
+  fi
+}
+
+mapfile -t PACKAGES < <(list_packages)
+if [[ ${#PACKAGES[@]} -eq 0 ]]; then
+  log_error "❌ No publishable Cargo packages in this workspace"
+  exit 1
+fi
+log_info "🔍 Packages: ${PACKAGES[*]}"
+
+log_info "🧹 Cleaning old artifacts..."
+rm -rf "$TARGET_DIR/package"
+
+for name in "${PACKAGES[@]}"; do
+  package_one "$name"
+done
+
 if [[ "${PUBLISH_CRATE:-false}" == "true" ]]; then
   "$_SCRIPTS_DIR/cargo-publish-registry.sh" >/dev/null || {
     log_error "❌ Publish refused (set CARGO_REGISTRY=dpk; crates.io is blocked)"
     exit 1
   }
-  log_info "📤 Publishing to Cargo registry ${CARGO_REGISTRY}..."
-  set +e
-  PUBLISH_OUTPUT=$(cargo publish --registry "${CARGO_REGISTRY}" --allow-dirty 2>&1)
-  PUBLISH_EXIT=$?
-  set -e
-  if [[ $PUBLISH_EXIT -ne 0 ]]; then
-    if echo "$PUBLISH_OUTPUT" | grep -qiE 'already exists|previously uploaded|duplicate version'; then
-      log_info "⚠️  $PACKAGE_NAME@$CURRENT_VERSION already on registry ${CARGO_REGISTRY}, skipping (this is OK)"
-    else
-      echo "$PUBLISH_OUTPUT" >&2
-      log_error "❌ Publish failed"
+  # Repeat until every package is published or skipped: dependents may need
+  # earlier members on the registry first.
+  remaining=("${PACKAGES[@]}")
+  for _round in $(seq 1 "${#PACKAGES[@]}"); do
+    [[ ${#remaining[@]} -eq 0 ]] && break
+    next=()
+    for name in "${remaining[@]}"; do
+      if publish_one "$name"; then
+        :
+      else
+        next+=("$name")
+      fi
+    done
+    if [[ ${#next[@]} -eq "${#remaining[@]}" ]]; then
+      log_error "❌ No progress publishing: ${remaining[*]}"
       exit 1
     fi
-  else
-    echo "$PUBLISH_OUTPUT"
-    log_info "✅ Publish complete for $PACKAGE_NAME@$CURRENT_VERSION"
-  fi
+    remaining=("${next[@]}")
+  done
 else
   log_info "💡 To publish to Kellnr registry dpk, set PUBLISH_CRATE=true CARGO_REGISTRY=dpk"
 fi
