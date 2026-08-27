@@ -74,26 +74,40 @@ pub fn run(ctx: &RunContext, skips: &SkipFlags, cancelled: &Arc<AtomicBool>) -> 
             }
         }
         Language::Rust => {
+            // clippy (ruff check analog)
             let req = ExecRequest {
                 program: OsString::from("cargo"),
-                args: [
-                    "clippy",
-                    "--workspace",
-                    "--all-targets",
-                    "--all-features",
-                    "--",
-                    "-D",
-                    "warnings",
-                ]
-                .iter()
-                .map(OsString::from)
-                .collect(),
+                args: rust_clippy_args(),
+                cwd: ctx.project_dir.clone(),
+                env_overrides: env.clone(),
+                timeout,
+                output_mode: ctx.output_mode,
+            };
+            match run_program(&req, cancelled) {
+                Err(e) => {
+                    return PhaseResult::failure(
+                        start.elapsed().as_millis() as u64,
+                        ErrorInfo::from(&e),
+                    )
+                }
+                Ok(outcome) => {
+                    let r = outcome_to_result(outcome);
+                    if r.is_terminal() {
+                        return r;
+                    }
+                }
+            }
+
+            // cargo fmt --check (ruff format --check analog)
+            let req2 = ExecRequest {
+                program: OsString::from("cargo"),
+                args: rust_fmt_check_args(),
                 cwd: ctx.project_dir.clone(),
                 env_overrides: env,
                 timeout,
                 output_mode: ctx.output_mode,
             };
-            match run_program(&req, cancelled) {
+            match run_program(&req2, cancelled) {
                 Err(e) => {
                     PhaseResult::failure(start.elapsed().as_millis() as u64, ErrorInfo::from(&e))
                 }
@@ -226,6 +240,28 @@ fn set_or_update(env: &mut Vec<(OsString, OsString)>, key: &str, val: OsString) 
     }
 }
 
+fn rust_clippy_args() -> Vec<OsString> {
+    [
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--all-features",
+        "--",
+        "-D",
+        "warnings",
+    ]
+    .iter()
+    .map(OsString::from)
+    .collect()
+}
+
+fn rust_fmt_check_args() -> Vec<OsString> {
+    ["fmt", "--all", "--", "--check"]
+        .iter()
+        .map(OsString::from)
+        .collect()
+}
+
 pub(crate) fn outcome_to_result(outcome: ExecOutcome) -> PhaseResult {
     if outcome.cancelled {
         return PhaseResult::cancelled(outcome.duration_ms);
@@ -243,4 +279,34 @@ pub(crate) fn outcome_to_result(outcome: ExecOutcome) -> PhaseResult {
         return PhaseResult::failure(outcome.duration_ms, error);
     }
     PhaseResult::success(outcome.duration_ms)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rust_lint_is_clippy_then_fmt_check() {
+        let clippy: Vec<String> = rust_clippy_args()
+            .iter()
+            .map(|s| s.to_string_lossy().into_owned())
+            .collect();
+        let fmt: Vec<String> = rust_fmt_check_args()
+            .iter()
+            .map(|s| s.to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            clippy,
+            [
+                "clippy",
+                "--workspace",
+                "--all-targets",
+                "--all-features",
+                "--",
+                "-D",
+                "warnings"
+            ]
+        );
+        assert_eq!(fmt, ["fmt", "--all", "--", "--check"]);
+    }
 }

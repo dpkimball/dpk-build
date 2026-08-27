@@ -6,7 +6,7 @@ Prefer **`make b`** → `dpk-build deliver`. Scripts under `rust/` implement ima
 
 | Phase | Implementation |
 |-------|----------------|
-| lint | `cargo clippy --workspace --all-targets --all-features -- -D warnings` |
+| lint | `cargo clippy --workspace --all-targets --all-features -- -D warnings` then `cargo fmt --all -- --check` |
 | test | `cargo test --all` |
 | build | `cargo build --release --workspace` |
 | image | `rust/build-docker.sh` |

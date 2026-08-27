@@ -7,7 +7,7 @@ Runs in order during `dpk-build deliver`. A terminal phase failure marks later p
 | Language | Command |
 |----------|---------|
 | Python | `uv run ruff check` then `uv run ruff format --check` (`LINT_DIRECTORY`, default `.`) |
-| Rust | `cargo clippy --workspace --all-targets --all-features -- -D warnings` |
+| Rust | `cargo clippy --workspace --all-targets --all-features -- -D warnings` then `cargo fmt --all -- --check` |
 | Java | `mvn -B -f <pom> -DskipTests validate compile` (or Docker Maven) |
 | Node | fails (`language_unsupported_for_operation`) |
 

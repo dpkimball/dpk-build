@@ -8,4 +8,5 @@ pub mod json_output;
 pub mod language_matrix;
 pub mod lock;
 pub mod resolve_build_root;
+pub mod rust_lint;
 pub mod skip_logic;
