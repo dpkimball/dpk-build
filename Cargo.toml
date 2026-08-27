@@ -6,6 +6,16 @@ description = "Canonical make b / deliver CLI for DPK repositories"
 repository = "https://github.com/dpkimball/dpk-build"
 publish = ["dpk"]
 
+# Stop cargo walking into a parent checkout (CI sibling layout / leftover
+# GITHUB_WORKSPACE Cargo.toml with registry = "dpk"). Nested test fixtures
+# must stay out of this workspace or `cargo test` inside them fails.
+[workspace]
+exclude = [
+    "tests/fixtures/rust_slow",
+    "tests/fixtures/fake_project_rust",
+    "tests/fixtures/consumers/rust_plain",
+]
+
 [[bin]]
 name = "dpk-build"
 path = "src/main.rs"
