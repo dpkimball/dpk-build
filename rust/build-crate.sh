@@ -94,7 +94,12 @@ package_one() {
   fi
 }
 
-mapfile -t PACKAGES < <(list_packages)
+# Bash 3.2 compatible (macOS /bin/bash). mapfile/readarray require Bash 4+.
+PACKAGES=()
+while IFS= read -r _pkg || [[ -n "${_pkg:-}" ]]; do
+  [[ -z "${_pkg:-}" ]] && continue
+  PACKAGES+=("$_pkg")
+done < <(list_packages)
 if [[ ${#PACKAGES[@]} -eq 0 ]]; then
   log_error "❌ No publishable Cargo packages in this workspace"
   exit 1
@@ -130,7 +135,11 @@ if [[ "${PUBLISH_CRATE:-false}" == "true" ]]; then
       log_error "❌ No progress publishing: ${remaining[*]}"
       exit 1
     fi
-    remaining=("${next[@]}")
+    if [[ ${#next[@]} -eq 0 ]]; then
+      remaining=()
+    else
+      remaining=("${next[@]}")
+    fi
   done
 else
   log_info "💡 To publish to Kellnr registry dpk, set PUBLISH_CRATE=true CARGO_REGISTRY=dpk"
