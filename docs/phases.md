@@ -1,3 +1,8 @@
+---
+title: Deliver phases
+description: Per-phase reference for dpk-build deliver, including commands and skip logic.
+category: architecture
+---
 # Deliver phases
 
 Runs in order during `dpk-build deliver`. A terminal phase failure marks later phases `skipped` with `reason: previous_phase_failed`.

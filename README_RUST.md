@@ -1,3 +1,8 @@
+---
+title: Rust support in dpk-build
+description: How Rust projects use dpk-build for image, deploy, and registry publishing.
+category: development
+---
 # Rust support in dpk-build
 
 Prefer **`make b`** → `dpk-build deliver`. Scripts under `rust/` implement image/deploy (and optional manual flows).

@@ -133,7 +133,7 @@ Priority: CLI > env > `dpk.toml [skip]` (deliver only).
 
 ## CLI
 
-```
+```text
 dpk-build deliver [project] [--skip-lint] [--skip-tests] [--skip-build] [--skip-image] [--skip-deploy]
 dpk-build lint | test | build | image | deploy | verify [project]
 dpk-build deploy [project] [--target local]

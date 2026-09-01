@@ -1,10 +1,15 @@
+---
+title: Architecture
+description: Architecture overview of the dpk-build Rust CLI and its deliver pipeline.
+category: architecture
+---
 # Architecture
 
 `dpk-build` is a Rust CLI that orchestrates deliver. Language-specific heavy lifting for image and deploy still lives in shell scripts under `python/` and `rust/`.
 
 ## Deliver flow
 
-```
+```text
 make b
   → Makefile.common
   → dpk-build deliver
