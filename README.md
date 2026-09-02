@@ -1,8 +1,8 @@
 # dpk-build
 
-[![Rust Tests](https://github.com/dpkimball/dpk-build/actions/workflows/rust-tests.yml/badge.svg)](https://github.com/dpkimball/dpk-build/actions/workflows/rust-tests.yml)
-[![ShellCheck](https://github.com/dpkimball/dpk-build/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/dpkimball/dpk-build/actions/workflows/shellcheck.yml)
-[![Security Audit](https://github.com/dpkimball/dpk-build/actions/workflows/security-audit.yml/badge.svg)](https://github.com/dpkimball/dpk-build/actions/workflows/security-audit.yml)
+[![Rust Tests](https://github.com/dpkimball/dpk-build-public/actions/workflows/rust-tests.yml/badge.svg)](https://github.com/dpkimball/dpk-build-public/actions/workflows/rust-tests.yml)
+[![ShellCheck](https://github.com/dpkimball/dpk-build-public/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/dpkimball/dpk-build-public/actions/workflows/shellcheck.yml)
+[![Security Audit](https://github.com/dpkimball/dpk-build-public/actions/workflows/security-audit.yml/badge.svg)](https://github.com/dpkimball/dpk-build-public/actions/workflows/security-audit.yml)
 
 Shared **make b / deliver** pipeline. Any project can include `Makefile.common`, add a `dpk.toml`, and run lint → test → build → image → deploy → verify via the `dpk-build` CLI.
 
