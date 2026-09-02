@@ -1,0 +1,131 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            runs-on: product-ci-linux
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x86_64
+
+          - name: macos-aarch64
+            runs-on: product-ci-macos
+            target: aarch64-apple-darwin
+            platform: macos-aarch64
+
+          - name: windows-x86_64
+            runs-on: product-ci-windows
+            target: x86_64-pc-windows-msvc
+            platform: windows-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: cargo build --release
+        shell: bash
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          ARCHIVE="dpk-build-${TAG}-${{ matrix.platform }}.tar.gz"
+          cp target/${{ matrix.target }}/release/dpk-build dpk-build
+          tar -czf "$ARCHIVE" dpk-build
+          sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $TAG = "${{ steps.tag.outputs.tag }}"
+          $ARCHIVE = "dpk-build-${TAG}-${{ matrix.platform }}.tar.gz"
+          Copy-Item "target/${{ matrix.target }}/release/dpk-build.exe" "dpk-build.exe"
+          tar -czf $ARCHIVE dpk-build.exe
+          $hash = (Get-FileHash $ARCHIVE -Algorithm SHA256).Hash.ToLower()
+          "$hash  $ARCHIVE" | Out-File -Encoding ascii "${ARCHIVE}.sha256"
+          echo "ARCHIVE=$ARCHIVE" >> $env:GITHUB_ENV
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: |
+            dpk-build-*-${{ matrix.platform }}.tar.gz
+            dpk-build-*-${{ matrix.platform }}.tar.gz.sha256
+          retention-days: 1
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: product-ci-linux
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          gh release create "$TAG" \
+            --title "dpk-build ${TAG}" \
+            --notes "$(cat <<'EOF'
+          ## Install
+
+          ```bash
+          curl -fsSL https://raw.githubusercontent.com/dpkimball/dpk-build/master/install.sh | DPKBUILD_VERSION=$TAG bash
+          ```
+
+          Or pin the version in CI — see [install.sh](./install.sh).
+          EOF
+          )" \
+            artifacts/**/*.tar.gz \
+            artifacts/**/*.sha256

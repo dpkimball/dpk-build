@@ -1,0 +1,6 @@
+[project]
+name = "fake-node-noskip"
+language = "node"
+
+[docker]
+image_name = "fake-node-noskip"

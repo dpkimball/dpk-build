@@ -1,0 +1,55 @@
+# Consumer workflow: thin call into dpk-ci security-audit-dispatch.
+# Generated from security-audit/workflows/templates/security-audit-pr.yml — prefer sync-pr-workflows.py.
+#
+# Ownership:
+#   dpk-ci          — reusable HTTP client (POST /v1/audits; fire-and-forget)
+#   security-audit  — API + worker Jobs + Check Run / SARIF reporting
+#
+# Required org/repo config:
+#   vars.SECURITY_AUDIT_API_URL
+#   secrets.SECURITY_AUDIT_API_KEY
+#
+# Runner pools (dpk-ci#211 — disjoint scheduling eligibility):
+#   Wait for CI (inside dispatch) → ci-wait
+#   Product CI                    → product-ci
+#   Thin audit client             → optional with.runner (prefer product-ci)
+# Every consumer needs an online runner labeled ci-wait.
+#
+# Prefer runner groups + labels where available.
+#
+# Do NOT paste inline dispatch/wait logic into app repos.
+# Do NOT sync this template over dpkimball/security-audit's own
+# .github/workflows/security-audit.yml (gate + local workflow_call there).
+
+name: Security Audit
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.mdx"
+      - "**/*.rst"
+      - "**/*.txt"
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+concurrency:
+  group: security-audit-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+
+jobs:
+  security-audit:
+    uses: dpkimball/dpk-ci/.github/workflows/security-audit-dispatch.yml@master
+    with:
+      repository_name: dpk-build
+      github_repository: dpkimball/dpk-build
+      classification: low
+      runner: product-ci
+    secrets: inherit

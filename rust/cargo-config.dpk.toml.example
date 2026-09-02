@@ -1,0 +1,13 @@
+# Example ~/.cargo/config.toml fragment for the DPK Kellnr Cargo registry.
+# Do not set [registry] default — public crates stay on crates.io.
+# Do not pin a host/port here. Index comes from CARGO_REGISTRIES_DPK_INDEX
+# (dpk-build env.sh: localhost + CARGO_PORT). CI uses secrets.PRIVATE_CARGO_URL
+# the same way Python uses PRIVATE_PYPI_URL.
+#
+# Token goes in ~/.cargo/credentials.toml (never commit):
+#
+#   [registries.dpk]
+#   token = "<Kellnr API token>"
+
+[registries.dpk]
+credential-provider = ["cargo:token"]

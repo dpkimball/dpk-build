@@ -1,0 +1,11 @@
+[project]
+name = "contract-node"
+language = "node"
+
+[docker]
+image_name = "contract-node"
+
+[skip]
+lint = true
+tests = true
+build = true

@@ -1,0 +1,13 @@
+[project]
+name = "contract-java"
+language = "java"
+maven_pom = "jobs/pom.xml"
+
+[docker]
+image_name = "contract-java"
+dockerfile = "Dockerfile.runtime"
+
+[skip]
+lint = true
+tests = true
+build = true

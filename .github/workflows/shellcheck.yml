@@ -1,0 +1,86 @@
+name: ShellCheck
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - '**/*.sh'
+      - '.github/workflows/shellcheck.yml'
+  pull_request:
+    paths:
+      - '**/*.sh'
+      - '.github/workflows/shellcheck.yml'
+  workflow_dispatch: {}
+
+jobs:
+  shellcheck:
+    # Disjoint from Security Audit Wait (ci-wait) — see dpk-ci#211 / runner pools doc.
+    runs-on: product-ci
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure shellcheck on PATH
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            ver=v0.10.0
+            tmp=$(mktemp -d)
+            curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/${ver}/shellcheck-${ver}.linux.x86_64.tar.xz" \
+              -o "$tmp/sc.tar.xz"
+            tar -xJf "$tmp/sc.tar.xz" -C "$tmp"
+            mkdir -p "$HOME/.local/bin"
+            install -m 755 "$tmp/shellcheck-${ver}/shellcheck" "$HOME/.local/bin/shellcheck"
+            rm -rf "$tmp"
+          fi
+          shellcheck --version
+
+      - name: Run ShellCheck
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          find . -name '*.sh' \
+            ! -path './templates/*' \
+            | sort \
+            | xargs shellcheck --severity=warning
+
+  paths-env-matrix:
+    # Behavioural gate for the canonical path/env contract (issue #39).
+    # Disjoint from Security Audit Wait (ci-wait) — see dpk-ci#211 / runner pools doc.
+    runs-on: product-ci
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: paths.sh / env.sh behaviour matrix
+        run: bash tests/shell/paths-env-matrix.sh
+
+  makefile-build-root-guard:
+    # Ambient BUILD_ROOT=project must not break template / Makefile.common (issue #55).
+    runs-on: product-ci
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Makefile BUILD_ROOT pollution guard
+        run: bash tests/shell/makefile-build-root-guard.sh
+
+  script-dir-survives-project-env:
+    # Project env.sh must not clobber phase-script paths (consumer SCRIPT_DIR).
+    runs-on: product-ci
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: _SCRIPTS_DIR survives project env.sh
+        run: bash tests/shell/script-dir-survives-project-env.sh
+
+      - name: In-repo consumer contract (language × image/deploy)
+        run: bash tests/shell/consumer-contract.sh
+
+      - name: Workspace consumer dry-run (no-op unless dpk-workspace.toml is the parent)
+        run: bash tests/shell/workspace-consumer-dry-run.sh
+
+      - name: Cargo publish uses Kellnr registry dpk (never crates.io)
+        run: bash tests/shell/build-crate-registry.sh

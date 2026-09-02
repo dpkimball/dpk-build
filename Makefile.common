@@ -1,0 +1,57 @@
+SHELL := /bin/bash
+
+# BUILD_ROOT must be set before this file is included (path to this dpk-build tree).
+# See templates/Makefile for the canonical project Makefile pattern.
+# Projects must use := with an abspath relative to their Makefile — not ?= —
+# so an ambient BUILD_ROOT=project-cwd cannot break the include.
+#
+# make b resolution order:
+#   1. dpk-build on PATH (CI runners with the binary pre-installed)
+#   2. bootstrap.sh in BUILD_ROOT (local dev — builds from source)
+#
+# Behaviour:
+#   local (CI unset): full pipeline — lint → test → build → image → deploy → verify
+#   CI (CI=true):     lint → test → build only (image and deploy skipped)
+
+ifeq ($(wildcard $(BUILD_ROOT)/bootstrap.sh),)
+$(error BUILD_ROOT=$(BUILD_ROOT) is not a dpk-build tree (missing bootstrap.sh). Ambient BUILD_ROOT pollution? In the project Makefile use: BUILD_ROOT := $$(abspath $$(dir $$(lastword $$(MAKEFILE_LIST)))/../dpk-build))
+endif
+
+.PHONY: b b-legacy test lint clean update-versions deploy-local help
+
+b:
+	@DPK_BIN="$$(command -v dpk-build 2>/dev/null || $(BUILD_ROOT)/bootstrap.sh)"; \
+	 if [ "$${CI:-}" = "true" ]; then \
+	   BUILD_ROOT="$(BUILD_ROOT)" "$$DPK_BIN" deliver --skip-image --skip-deploy; \
+	 else \
+	   BUILD_ROOT="$(BUILD_ROOT)" "$$DPK_BIN" deliver; \
+	 fi
+
+b-legacy:
+	$(BUILD_ROOT)/build.sh
+
+test:
+	$(BUILD_ROOT)/test.sh
+
+lint:
+	$(BUILD_ROOT)/lint.sh
+
+clean:
+	rm -rf dist/ build/ .venv/ *.egg-info __pycache__
+
+update-versions:
+	PYPROJECT=$(CURDIR)/pyproject.toml INTERNAL_PKGS="$(INTERNAL_PKGS)" \
+	  $(BUILD_ROOT)/update-versions.sh
+
+deploy-local:
+	$(BUILD_ROOT)/python/build-wheel.sh
+
+help:
+	@echo "Standard targets (from Makefile.common):"
+	@echo "  b               build (language auto-detected from project type)"
+	@echo "  test            run tests"
+	@echo "  lint            lint"
+	@echo "  clean           remove build artifacts"
+	@echo "  update-versions bump INTERNAL_PKGS versions in pyproject.toml"
+	@echo "  deploy-local    build wheel and upload to local PyPI"
+	@echo "  help            show this message"

@@ -1,0 +1,36 @@
+SHELL := /bin/bash
+
+# BUILD_ROOT must be set before this file is included.
+# See templates/Makefile for the canonical project Makefile pattern.
+
+.PHONY: b build test lint fmt clippy clean help
+
+# b calls rust/build.sh directly — no language dispatcher needed for known-Rust projects
+b:
+	$(BUILD_ROOT)/rust/build.sh
+
+build: b
+
+test:
+	cargo test --all
+
+lint: clippy fmt
+
+fmt:
+	cargo fmt --all
+
+clippy:
+	cargo clippy --all-targets --all-features -- -D warnings
+
+clean:
+	cargo clean
+
+help:
+	@echo "Standard targets (from Makefile.rust-common):"
+	@echo "  b / build  build Docker image via rust/build.sh"
+	@echo "  test       cargo test --all"
+	@echo "  lint       clippy + fmt"
+	@echo "  fmt        cargo fmt --all"
+	@echo "  clippy     cargo clippy (warnings as errors)"
+	@echo "  clean      cargo clean"
+	@echo "  help       show this message"

@@ -1,0 +1,48 @@
+name: Rust Tests
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/rust-tests.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/rust-tests.yml'
+  workflow_dispatch: {}
+
+jobs:
+  rust:
+    # Disjoint from Security Audit Wait (ci-wait) — see dpk-ci#211 / runner pools doc.
+    runs-on: product-ci
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: cargo fmt --check
+        run: cargo fmt --check
+
+      - name: cargo clippy
+        run: cargo clippy --locked -- -D warnings
+
+      - name: cargo test
+        run: cargo test --locked --all
+
+      - name: stdout ownership check
+        run: |
+          set -euo pipefail
+          # Only output.rs may call println! or print! (stdout ownership invariant).
+          # eprintln!/eprint! write to stderr and are always permitted.
+          violations=$(grep -rn --include='*.rs' 'println!\|print!' src/ | grep -v 'eprintln!\|eprint!' | grep -v 'src/output.rs' | grep -v 'src/commands/version.rs' | grep -v 'src/commands/doctor.rs' || true)
+          if [ -n "$violations" ]; then
+            echo "ERROR: println!/print! found outside permitted files:"
+            echo "$violations"
+            exit 1
+          fi
