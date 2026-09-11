@@ -20,8 +20,7 @@ on:
 
 jobs:
   rust:
-    # Disjoint from Security Audit Wait (ci-wait) — see dpk-ci#211 / runner pools doc.
-    runs-on: product-ci
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4

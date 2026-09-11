@@ -14,8 +14,7 @@ on:
 
 jobs:
   shellcheck:
-    # Disjoint from Security Audit Wait (ci-wait) — see dpk-ci#211 / runner pools doc.
-    runs-on: product-ci
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -46,9 +45,7 @@ jobs:
             | xargs shellcheck --severity=warning
 
   paths-env-matrix:
-    # Behavioural gate for the canonical path/env contract (issue #39).
-    # Disjoint from Security Audit Wait (ci-wait) — see dpk-ci#211 / runner pools doc.
-    runs-on: product-ci
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -57,8 +54,7 @@ jobs:
         run: bash tests/shell/paths-env-matrix.sh
 
   makefile-build-root-guard:
-    # Ambient BUILD_ROOT=project must not break template / Makefile.common (issue #55).
-    runs-on: product-ci
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -67,8 +63,7 @@ jobs:
         run: bash tests/shell/makefile-build-root-guard.sh
 
   script-dir-survives-project-env:
-    # Project env.sh must not clobber phase-script paths (consumer SCRIPT_DIR).
-    runs-on: product-ci
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
