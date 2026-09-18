@@ -86,7 +86,7 @@ fn rust_lint_fails_when_sources_are_unformatted() {
         "fixture must be clippy-clean so lint failure is fmt: {clippy_out}"
     );
 
-    let (fmt, fmt_out) = cargo(tmp.path(), &["fmt", "--all", "--", "--check"]);
+    let (fmt, fmt_out) = cargo(tmp.path(), &["fmt", "--", "--check"]);
     assert_ne!(fmt, 0, "fixture must be unformatted: {fmt_out}");
     assert!(
         fmt_out.contains("Diff") || fmt_out.contains("rustfmt"),

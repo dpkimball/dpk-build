@@ -256,7 +256,12 @@ fn rust_clippy_args() -> Vec<OsString> {
 }
 
 fn rust_fmt_check_args() -> Vec<OsString> {
-    ["fmt", "--all", "--", "--check"]
+    // Do not pass `--all`: that formats local path-based dependencies and
+    // loads *their* workspaces. Plugin CI path-deps binder-desktop crates
+    // without sibling plugins (bucket-binder, goals-binder), so `--all`
+    // fails metadata on binder-app. `cargo fmt` still formats the current
+    // package and, for a workspace, all members.
+    ["fmt", "--", "--check"]
         .iter()
         .map(OsString::from)
         .collect()
@@ -307,6 +312,6 @@ mod tests {
                 "warnings"
             ]
         );
-        assert_eq!(fmt, ["fmt", "--all", "--", "--check"]);
+        assert_eq!(fmt, ["fmt", "--", "--check"]);
     }
 }
