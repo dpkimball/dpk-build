@@ -1,5 +1,5 @@
 name: Work item (issue doctrine)
-description: Standard DPK work issue with acceptance criteria and four-role Review ledger.
+description: Standard DPK/Keepsake work issue with acceptance criteria and four-role Review ledger.
 title: "[work]: "
 labels: []
 body:
